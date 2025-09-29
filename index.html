@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>📚 Book Tracker</title>
 <style>
-/* Same styles as before */
 body { font-family: Arial, sans-serif; background: #f0f4f8; margin:0; padding:20px; display:flex; flex-direction:column; align-items:center; }
 h1 { color:#333; }
 .input-container, .category-tools { width:100%; max-width:500px; display:flex; flex-direction:column; margin-bottom:20px; }
@@ -79,7 +78,6 @@ const firebaseConfig = {
     measurementId: "G-MW8W0RSYY2"
 };
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const booksRef = ref(db, 'books');
@@ -97,8 +95,67 @@ document.getElementById('addBtn').addEventListener('click', ()=>{
   document.getElementById('bookCategory').value = '';
 });
 
-// Listen for changes
-onValue(booksRef, snapshot => {
+// Clear all books
+document.getElementById('clearAllBtn').addEventListener('click', ()=>{
+  if(confirm("Delete all books?")) remove(booksRef);
+});
+
+// Rename category
+document.getElementById('renameBtn').addEventListener('click', ()=>{
+  const from = document.getElementById('renameFrom').value;
+  const to = document.getElementById('renameTo').value.trim();
+  if(!from || !to){ alert("Select and enter new category"); return; }
+  onValue(booksRef, snapshot => {
+    snapshot.forEach(child => {
+      const book = child.val();
+      if(book.category === from) update(ref(db, 'books/' + child.key), {category: to});
+    });
+  }, {onlyOnce:true});
+  document.getElementById('renameTo').value = '';
+});
+
+// Export CSV
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  onValue(booksRef, snapshot=>{
+    let csv = "Book Name,Amount,Category\n";
+    snapshot.forEach(child=>{
+      const b = child.val();
+      csv += `"${b.name}",${b.amount},"${b.category}"\n`;
+    });
+    const blob = new Blob([csv], {type:"text/csv"});
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'book_list.csv';
+    document.body.appendChild(link); link.click(); document.body.removeChild(link);
+  }, {onlyOnce:true});
+});
+
+// Import CSV
+document.getElementById('importBtn').addEventListener('click', ()=>{
+  const fileInput = document.getElementById('importFile');
+  if(!fileInput.files.length){ alert("Choose CSV first"); return; }
+  const file = fileInput.files[0];
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const lines = e.target.result.split("\n").map(l=>l.trim()).filter(l=>l);
+    for(let i=1;i<lines.length;i++){
+      const [name, amount, category] = lines[i].split(",").map(v=>v.replace(/(^"|"$)/g,"").trim());
+      if(name && amount && category) push(booksRef).then(()=> set(ref(db, 'books/' + push(booksRef).key), {name, amount:Number(amount), category}));
+    }
+    fileInput.value='';
+  }
+  reader.readAsText(file);
+});
+
+// Update and Delete
+window.updateBook = function(id, field, value){
+  if(field==='amount') value = Number(value);
+  update(ref(db, 'books/' + id), {[field]: value});
+}
+window.deleteBook = function(id){ remove(ref(db, 'books/' + id)); }
+
+// Render table on DB change
+onValue(booksRef, snapshot=>{
   const tbody = document.querySelector("#bookTable tbody");
   tbody.innerHTML = '';
   let total = 0;
@@ -106,17 +163,17 @@ onValue(booksRef, snapshot => {
   const search = document.getElementById('searchBox').value.toLowerCase();
   const categories = new Set();
 
-  snapshot.forEach(child => {
-    const book = child.val(); const id = child.key;
-    categories.add(book.category);
-    if((filter==='All'||book.category===filter) && book.name.toLowerCase().includes(search)){
-      total += Number(book.amount);
+  snapshot.forEach(child=>{
+    const b = child.val(); const id = child.key;
+    categories.add(b.category);
+    if((filter==='All'||b.category===filter) && b.name.toLowerCase().includes(search)){
+      total += Number(b.amount);
       const row = document.createElement('tr');
       row.innerHTML = `
-        <td contenteditable="true" onblur="updateBook('${id}','name',this.innerText)">${book.name}</td>
-        <td contenteditable="true" onblur="updateBook('${id}','amount',this.innerText)">${book.amount}</td>
-        <td contenteditable="true" onblur="updateBook('${id}','category',this.innerText)">${book.category}</td>
-        <td><button onclick="deleteBook('${id}')">Delete</button></td>
+        <td contenteditable="true" onblur="updateBook('${id}','name',this.innerText)">${b.name}</td>
+        <td contenteditable="true" onblur="updateBook('${id}','amount',this.innerText)">${b.amount}</td>
+        <td contenteditable="true" onblur="updateBook('${id}','category',this.innerText)">${b.category}</td>
+        <td><button class="delete-btn" onclick="deleteBook('${id}')">Delete</button></td>
       `;
       tbody.appendChild(row);
     }
@@ -126,7 +183,7 @@ onValue(booksRef, snapshot => {
   const renameFromSelect = document.getElementById('renameFrom');
   filterSelect.innerHTML = `<option value="All">All</option>`;
   renameFromSelect.innerHTML = '';
-  categories.forEach(c => {
+  categories.forEach(c=>{
     filterSelect.innerHTML += `<option value="${c}">${c}</option>`;
     renameFromSelect.innerHTML += `<option value="${c}">${c}</option>`;
   });
@@ -134,13 +191,9 @@ onValue(booksRef, snapshot => {
   document.getElementById('totalBooks').innerText = `Total Books: ${total}`;
 });
 
-// Delete function
-window.deleteBook = function(id){ remove(ref(db, 'books/'+id)); }
-// Update function
-window.updateBook = function(id, field, value){
-  if(field==='amount') value = Number(value);
-  update(ref(db, 'books/'+id), {[field]: value});
-}
+// Search and filter
+document.getElementById('searchBox').addEventListener('input', ()=>{ onValue(booksRef, snapshot => render(snapshot)); });
+document.getElementById('filterCategory').addEventListener('change', ()=>{ onValue(booksRef, snapshot => render(snapshot)); });
 
 </script>
 </body>
