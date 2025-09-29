@@ -5,62 +5,63 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>📚 Book Tracker (Online)</title>
 <style>
-  body { font-family: Arial, sans-serif; background: #f0f4f8; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-  h1 { color: #333; }
-  .input-container, .category-tools { width: 100%; max-width: 500px; display: flex; flex-direction: column; margin-bottom: 20px; }
-  input, select, button { margin: 5px 0; padding: 10px; font-size: 16px; border-radius: 5px; border: 1px solid #ccc; }
-  button { cursor: pointer; background-color: #4CAF50; color: white; border: none; transition: background 0.3s; }
-  button:hover { background-color: #45a049; }
-  #clearAllBtn { background-color: #f44336; margin-top: 10px; } #clearAllBtn:hover { background-color: #e53935; }
-  #exportBtn { background-color: #2196F3; margin-top: 10px; } #exportBtn:hover { background-color: #1976D2; }
-  #importBtn { background-color: #FF9800; margin-top: 10px; } #importBtn:hover { background-color: #F57C00; }
-  table { width: 100%; max-width: 750px; border-collapse: collapse; margin-top: 20px; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
-  th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; word-break: break-word; }
-  th { background-color: #f7f7f7; }
-  .delete-btn { padding: 6px 12px; cursor: pointer; background: #f44336; color: white; border: none; border-radius: 4px; }
-  .delete-btn:hover { background: #e53935; }
-  #totalBooks { margin-top: 15px; font-weight: bold; font-size: 18px; color: #333; text-align: center; }
+body { font-family: Arial, sans-serif; background: #f0f4f8; margin:0; padding:20px; display:flex; flex-direction:column; align-items:center; }
+h1 { color:#333; }
+.input-container, .category-tools { width:100%; max-width:500px; display:flex; flex-direction:column; margin-bottom:20px; }
+input, select, button { margin:5px 0; padding:10px; font-size:16px; border-radius:5px; border:1px solid #ccc; }
+button { cursor:pointer; background-color:#4CAF50; color:white; border:none; transition:0.3s; }
+button:hover { background-color:#45a049; }
+#clearAllBtn { background-color:#f44336; } #clearAllBtn:hover { background-color:#e53935; }
+#exportBtn { background-color:#2196F3; } #exportBtn:hover { background-color:#1976D2; }
+#importBtn { background-color:#FF9800; } #importBtn:hover { background-color:#F57C00; }
+table { width:100%; max-width:750px; border-collapse:collapse; margin-top:20px; background:#fff; box-shadow:0 2px 6px rgba(0,0,0,0.1); }
+th, td { padding:12px; text-align:left; border-bottom:1px solid #ddd; word-break:break-word; }
+th { background-color:#f7f7f7; }
+.delete-btn { padding:6px 12px; cursor:pointer; background:#f44336; color:white; border:none; border-radius:4px; }
+.delete-btn:hover { background:#e53935; }
+#totalBooks { margin-top:15px; font-weight:bold; font-size:18px; color:#333; text-align:center; }
+@media (max-width:600px){ table, th, td { font-size:14px; } input, select, button { font-size:14px; padding:8px; } }
 </style>
 </head>
 <body>
 <h1>📚 Book Tracker (Online)</h1>
 
 <div class="input-container">
-  <input type="text" id="bookName" placeholder="Enter book name">
-  <input type="number" id="bookAmount" placeholder="Enter amount">
-  <select id="bookCategory">
-    <option value="">Select Category</option>
-    <option>Novel</option>
-    <option>Study</option>
-    <option>Comics</option>
-    <option>Magazine</option>
-    <option>Other</option>
-  </select>
-  <button onclick="addBook()">Add Book</button>
-  <button id="clearAllBtn" onclick="clearAllBooks()">Clear All Books</button>
-  <button id="exportBtn" onclick="exportToCSV()">Export to CSV</button>
-  <input type="file" id="importFile" accept=".csv" style="margin-top:10px;">
-  <button id="importBtn" onclick="importFromCSV()">Import from CSV</button>
+<input type="text" id="bookName" placeholder="Enter book name">
+<input type="number" id="bookAmount" placeholder="Enter amount">
+<select id="bookCategory">
+<option value="">Select Category</option>
+<option>Novel</option>
+<option>Study</option>
+<option>Comics</option>
+<option>Magazine</option>
+<option>Other</option>
+</select>
+<button onclick="addBook()">Add Book</button>
+<button id="clearAllBtn" onclick="clearAllBooks()">Clear All Books</button>
+<button id="exportBtn" onclick="exportToCSV()">Export to CSV</button>
+<input type="file" id="importFile" accept=".csv" style="margin-top:10px;">
+<button id="importBtn" onclick="importFromCSV()">Import from CSV</button>
 </div>
 
 <div class="category-tools">
-  <label><b>Filter by Category:</b></label>
-  <select id="filterCategory" onchange="renderTable()"><option value="All">All</option></select>
-  <label><b>Search:</b></label>
-  <input type="text" id="searchBox" placeholder="Search books..." oninput="renderTable()">
-  <label><b>Rename Category:</b></label>
-  <select id="renameFrom"></select>
-  <input type="text" id="renameTo" placeholder="New category name">
-  <button onclick="renameCategory()">Rename Category</button>
+<label><b>Filter by Category:</b></label>
+<select id="filterCategory" onchange="renderTable()"><option value="All">All</option></select>
+<label><b>Search:</b></label>
+<input type="text" id="searchBox" placeholder="Search books..." oninput="renderTable()">
+<label><b>Rename Category:</b></label>
+<select id="renameFrom"></select>
+<input type="text" id="renameTo" placeholder="New category name">
+<button onclick="renameCategory()">Rename Category</button>
 </div>
 
 <table id="bookTable">
 <thead>
 <tr>
-  <th>Book Name</th>
-  <th>Amount</th>
-  <th>Category</th>
-  <th>Actions</th>
+<th>Book Name</th>
+<th>Amount</th>
+<th>Category</th>
+<th>Actions</th>
 </tr>
 </thead>
 <tbody></tbody>
@@ -72,21 +73,26 @@
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"></script>
 
 <script>
-// Firebase config
+// ✅ Proper Firebase config (replace apiKey/projectId with dummy values)
 const firebaseConfig = {
-  databaseURL: "https://book-inventory-bd5ba-default-rtdb.firebaseio.com/"
+  apiKey: "FAKE_API_KEY",
+  authDomain: "FAKE_PROJECT.firebaseapp.com",
+  databaseURL: "https://book-inventory-bd5ba-default-rtdb.firebaseio.com",
+  projectId: "FAKE_PROJECT",
+  storageBucket: "FAKE_PROJECT.appspot.com",
+  messagingSenderId: "1234567890",
+  appId: "1:1234567890:web:abcdef123456"
 };
 const app = firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 // Add book
-function addBook() {
-  const name = document.getElementById("bookName").value.trim();
-  const amount = document.getElementById("bookAmount").value.trim();
-  const category = document.getElementById("bookCategory").value.trim();
-  if(!name || !amount || !category){ alert("Fill all fields."); return; }
-  const newBookRef = db.ref("books").push();
-  newBookRef.set({name, amount:Number(amount), category});
+function addBook(){
+  const name=document.getElementById("bookName").value.trim();
+  const amount=document.getElementById("bookAmount").value.trim();
+  const category=document.getElementById("bookCategory").value.trim();
+  if(!name||!amount||!category){ alert("Fill all fields"); return; }
+  db.ref("books").push({name, amount:Number(amount), category});
   document.getElementById("bookName").value="";
   document.getElementById("bookAmount").value="";
   document.getElementById("bookCategory").value="";
@@ -108,7 +114,7 @@ function clearAllBooks(){ if(confirm("Delete all books?")) db.ref("books").remov
 function renameCategory(){
   const from=document.getElementById("renameFrom").value;
   const to=document.getElementById("renameTo").value.trim();
-  if(!from || !to){ alert("Select and enter new category."); return; }
+  if(!from||!to){ alert("Select and enter new category"); return; }
   db.ref("books").once("value", snapshot=>{
     snapshot.forEach(child=>{
       const book=child.val();
@@ -137,14 +143,14 @@ function exportToCSV(){
 // Import CSV
 function importFromCSV(){
   const fileInput=document.getElementById("importFile");
-  if(!fileInput.files.length){ alert("Choose CSV first."); return; }
+  if(!fileInput.files.length){ alert("Choose CSV first"); return; }
   const file=fileInput.files[0]; const reader=new FileReader();
   reader.onload=function(e){
     const lines=e.target.result.split("\n").map(l=>l.trim()).filter(l=>l);
     for(let i=1;i<lines.length;i++){
       const [name,amount,category]=lines[i].split(",").map(v=>v.replace(/(^"|"$)/g,"").trim());
       if(name && amount && category){
-        db.ref("books").push().set({name,amount:Number(amount),category});
+        db.ref("books").push({name, amount:Number(amount), category});
       }
     }
     fileInput.value="";
@@ -159,6 +165,7 @@ function renderTable(snapshot){
   const filter=document.getElementById("filterCategory").value;
   const search=document.getElementById("searchBox").value.toLowerCase();
   let total=0; const categories=new Set();
+
   snapshot.forEach(child=>{
     const b=child.val(); const id=child.key;
     categories.add(b.category);
@@ -172,16 +179,21 @@ function renderTable(snapshot){
       tbody.appendChild(row);
     }
   });
+
   const filterSelect=document.getElementById("filterCategory");
   const renameFromSelect=document.getElementById("renameFrom");
   filterSelect.innerHTML=`<option value="All">All</option>`;
   renameFromSelect.innerHTML="";
-  categories.forEach(c=>{ filterSelect.innerHTML+=`<option value="${c}">${c}</option>`; renameFromSelect.innerHTML+=`<option value="${c}">${c}</option>`; });
+  categories.forEach(c=>{
+    filterSelect.innerHTML+=`<option value="${c}">${c}</option>`;
+    renameFromSelect.innerHTML+=`<option value="${c}">${c}</option>`;
+  });
+
   document.getElementById("totalBooks").innerText="Total Books: "+total;
 }
 
-// Listen to DB changes
-db.ref("books").on("value", snapshot=>{ renderTable(snapshot); });
+// Listen for DB changes
+db.ref("books").on("value", snapshot=>renderTable(snapshot));
 </script>
 </body>
 </html>
