@@ -47,8 +47,14 @@ th { background-color:#f7f7f7; }
 <div class="category-tools">
 <label><b>Filter:</b></label>
 <select id="filterCategory"><option value="All">All</option></select>
+
 <label><b>Search:</b></label>
 <input type="text" id="searchBox" placeholder="Search..." >
+
+<label><b>Add Category:</b></label>
+<input type="text" id="newCategory" placeholder="New category name">
+<button id="addCategoryBtn">Add Category</button>
+
 <label><b>Rename Category:</b></label>
 <select id="renameFrom"></select>
 <input type="text" id="renameTo" placeholder="New category name">
@@ -114,6 +120,32 @@ document.getElementById('renameBtn').addEventListener('click', ()=>{
   document.getElementById('renameTo').value='';
 });
 
+// Add new category
+document.getElementById('addCategoryBtn').addEventListener('click', ()=>{
+  const newCat = document.getElementById('newCategory').value.trim();
+  if(!newCat){ alert("Enter category name"); return; }
+
+  const bookCatSelect = document.getElementById('bookCategory');
+  if(!Array.from(bookCatSelect.options).some(opt => opt.value === newCat)){
+    const opt = document.createElement('option'); opt.value=newCat; opt.textContent=newCat;
+    bookCatSelect.appendChild(opt);
+  }
+
+  const filterSelect = document.getElementById('filterCategory');
+  if(!Array.from(filterSelect.options).some(opt => opt.value === newCat)){
+    const opt = document.createElement('option'); opt.value=newCat; opt.textContent=newCat;
+    filterSelect.appendChild(opt);
+  }
+
+  const renameSelect = document.getElementById('renameFrom');
+  if(!Array.from(renameSelect.options).some(opt => opt.value === newCat)){
+    const opt = document.createElement('option'); opt.value=newCat; opt.textContent=newCat;
+    renameSelect.appendChild(opt);
+  }
+
+  document.getElementById('newCategory').value='';
+});
+
 // Export CSV
 document.getElementById('exportBtn').addEventListener('click', ()=>{
   if(!latestSnapshot) return;
@@ -146,7 +178,7 @@ document.getElementById('importBtn').addEventListener('click', ()=>{
   reader.readAsText(file);
 });
 
-// Update/Delete functions
+// Update/Delete
 window.updateBook = function(id, field, value){
   if(field==='amount') value = Number(value);
   update(ref(db, 'books/' + id), {[field]: value});
@@ -159,7 +191,7 @@ onValue(booksRef, snapshot=>{
   renderTable();
 });
 
-// Render table function with filter & search
+// Render table function
 function renderTable(){
   if(!latestSnapshot) return;
   const tbody = document.querySelector("#bookTable tbody");
