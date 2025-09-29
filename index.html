@@ -28,12 +28,13 @@
       padding: 10px;
       text-align: left;
     }
-    .edit-btn, .delete-btn {
+    .delete-btn {
       padding: 5px 10px;
       cursor: pointer;
+      background: #f44336;
+      color: white;
+      border: none;
     }
-    .edit-btn { background: #4CAF50; color: white; border: none; }
-    .delete-btn { background: #f44336; color: white; border: none; }
   </style>
 </head>
 <body>
@@ -57,7 +58,11 @@
   </table>
 
   <script>
-    let books = [];
+    let books = JSON.parse(localStorage.getItem("books")) || [];
+
+    function saveBooks() {
+      localStorage.setItem("books", JSON.stringify(books));
+    }
 
     function renderTable() {
       const tbody = document.querySelector("#bookTable tbody");
@@ -87,6 +92,7 @@
 
       if (name && amount) {
         books.push({ name, amount });
+        saveBooks();
         renderTable();
         document.getElementById("bookName").value = "";
         document.getElementById("bookAmount").value = "";
@@ -97,12 +103,17 @@
 
     function updateBook(index, field, value) {
       books[index][field] = value;
+      saveBooks();
     }
 
     function deleteBook(index) {
       books.splice(index, 1);
+      saveBooks();
       renderTable();
     }
+
+    // Initial load
+    renderTable();
   </script>
 </body>
 </html>
