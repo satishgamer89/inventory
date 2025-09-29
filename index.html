@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Book Inventory</title>
+<title>📚 Book Inventory</title>
 <style>
 body { font-family: Arial, sans-serif; background: #f0f4f8; margin:0; padding:20px; display:flex; flex-direction:column; align-items:center; }
 h1 { color:#333; }
@@ -24,7 +24,7 @@ th { background-color:#f7f7f7; }
 </style>
 </head>
 <body>
-<h1>Book Inventory</h1>
+<h1>📚 Book Inventory</h1>
 
 <div class="input-container">
 <input type="text" id="bookName" placeholder="Enter book name">
@@ -66,7 +66,7 @@ th { background-color:#f7f7f7; }
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getDatabase, ref, push, set, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-// ðŸ”¹ Your Firebase config
+// Firebase config
 const firebaseConfig = {
     apiKey: "AIzaSyDqOE9GsfwOedcwbVIR_fmEMRERcm8ikF4",
     authDomain: "book-inventory-bd5ba.firebaseapp.com",
@@ -81,6 +81,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const booksRef = ref(db, 'books');
+let latestSnapshot = null;
 
 // Add book
 document.getElementById('addBtn').addEventListener('click', ()=>{
@@ -90,9 +91,9 @@ document.getElementById('addBtn').addEventListener('click', ()=>{
   if(!name || !amount || !category){ alert("Fill all fields"); return; }
   const newBookRef = push(booksRef);
   set(newBookRef, {name, amount:Number(amount), category});
-  document.getElementById('bookName').value = '';
-  document.getElementById('bookAmount').value = '';
-  document.getElementById('bookCategory').value = '';
+  document.getElementById('bookName').value='';
+  document.getElementById('bookAmount').value='';
+  document.getElementById('bookCategory').value='';
 });
 
 // Clear all books
@@ -105,35 +106,33 @@ document.getElementById('renameBtn').addEventListener('click', ()=>{
   const from = document.getElementById('renameFrom').value;
   const to = document.getElementById('renameTo').value.trim();
   if(!from || !to){ alert("Select and enter new category"); return; }
-  onValue(booksRef, snapshot => {
-    snapshot.forEach(child => {
-      const book = child.val();
-      if(book.category === from) update(ref(db, 'books/' + child.key), {category: to});
-    });
-  }, {onlyOnce:true});
-  document.getElementById('renameTo').value = '';
+  if(!latestSnapshot) return;
+  latestSnapshot.forEach(child => {
+    const book = child.val();
+    if(book.category === from) update(ref(db, 'books/' + child.key), {category: to});
+  });
+  document.getElementById('renameTo').value='';
 });
 
 // Export CSV
 document.getElementById('exportBtn').addEventListener('click', ()=>{
-  onValue(booksRef, snapshot=>{
-    let csv = "Book Name,Amount,Category\n";
-    snapshot.forEach(child=>{
-      const b = child.val();
-      csv += `"${b.name}",${b.amount},"${b.category}"\n`;
-    });
-    const blob = new Blob([csv], {type:"text/csv"});
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'book_list.csv';
-    document.body.appendChild(link); link.click(); document.body.removeChild(link);
-  }, {onlyOnce:true});
+  if(!latestSnapshot) return;
+  let csv = "Book Name,Amount,Category\n";
+  latestSnapshot.forEach(child=>{
+    const b = child.val();
+    csv += `"${b.name}",${b.amount},"${b.category}"\n`;
+  });
+  const blob = new Blob([csv], {type:"text/csv"});
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = 'book_list.csv';
+  document.body.appendChild(link); link.click(); document.body.removeChild(link);
 });
 
 // Import CSV
 document.getElementById('importBtn').addEventListener('click', ()=>{
   const fileInput = document.getElementById('importFile');
-  if(!fileInput.files.length){ alert("Choose CSV first"); return; }
+  if(!fileInput.files.length){ alert("Choose CSV first."); return; }
   const file = fileInput.files[0];
   const reader = new FileReader();
   reader.onload = function(e){
@@ -147,26 +146,33 @@ document.getElementById('importBtn').addEventListener('click', ()=>{
   reader.readAsText(file);
 });
 
-// Update and Delete
+// Update/Delete functions
 window.updateBook = function(id, field, value){
   if(field==='amount') value = Number(value);
   update(ref(db, 'books/' + id), {[field]: value});
 }
 window.deleteBook = function(id){ remove(ref(db, 'books/' + id)); }
 
-// Render table on DB change
+// Listen to DB and store snapshot
 onValue(booksRef, snapshot=>{
+  latestSnapshot = snapshot;
+  renderTable();
+});
+
+// Render table function with filter & search
+function renderTable(){
+  if(!latestSnapshot) return;
   const tbody = document.querySelector("#bookTable tbody");
-  tbody.innerHTML = '';
-  let total = 0;
+  tbody.innerHTML='';
   const filter = document.getElementById('filterCategory').value;
   const search = document.getElementById('searchBox').value.toLowerCase();
+  let total=0;
   const categories = new Set();
 
-  snapshot.forEach(child=>{
+  latestSnapshot.forEach(child=>{
     const b = child.val(); const id = child.key;
     categories.add(b.category);
-    if((filter==='All'||b.category===filter) && b.name.toLowerCase().includes(search)){
+    if((filter==='All' || b.category===filter) && b.name.toLowerCase().includes(search)){
       total += Number(b.amount);
       const row = document.createElement('tr');
       row.innerHTML = `
@@ -181,19 +187,19 @@ onValue(booksRef, snapshot=>{
 
   const filterSelect = document.getElementById('filterCategory');
   const renameFromSelect = document.getElementById('renameFrom');
-  filterSelect.innerHTML = `<option value="All">All</option>`;
-  renameFromSelect.innerHTML = '';
+  filterSelect.innerHTML=`<option value="All">All</option>`;
+  renameFromSelect.innerHTML='';
   categories.forEach(c=>{
     filterSelect.innerHTML += `<option value="${c}">${c}</option>`;
     renameFromSelect.innerHTML += `<option value="${c}">${c}</option>`;
   });
 
   document.getElementById('totalBooks').innerText = `Total Books: ${total}`;
-});
+}
 
-// Search and filter
-document.getElementById('searchBox').addEventListener('input', ()=>{ onValue(booksRef, snapshot => render(snapshot)); });
-document.getElementById('filterCategory').addEventListener('change', ()=>{ onValue(booksRef, snapshot => render(snapshot)); });
+// Search/filter triggers
+document.getElementById('searchBox').addEventListener('input', renderTable);
+document.getElementById('filterCategory').addEventListener('change', renderTable);
 
 </script>
 </body>
