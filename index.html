@@ -20,15 +20,15 @@
       text-align: center;
     }
 
-    .input-container {
+    .input-container, .category-tools {
       width: 100%;
-      max-width: 400px;
+      max-width: 500px;
       display: flex;
       flex-direction: column;
       margin-bottom: 20px;
     }
 
-    input, button {
+    input, select, button {
       margin: 5px 0;
       padding: 10px;
       font-size: 16px;
@@ -52,14 +52,29 @@
       background-color: #f44336;
       margin-top: 10px;
     }
-
     #clearAllBtn:hover {
       background-color: #e53935;
     }
 
+    #exportBtn {
+      background-color: #2196F3;
+      margin-top: 10px;
+    }
+    #exportBtn:hover {
+      background-color: #1976D2;
+    }
+
+    #importBtn {
+      background-color: #FF9800;
+      margin-top: 10px;
+    }
+    #importBtn:hover {
+      background-color: #F57C00;
+    }
+
     table {
       width: 100%;
-      max-width: 600px;
+      max-width: 750px;
       border-collapse: collapse;
       margin-top: 20px;
       background: #fff;
@@ -91,12 +106,19 @@
       background: #e53935;
     }
 
+    #totalBooks {
+      margin-top: 15px;
+      font-weight: bold;
+      font-size: 18px;
+      color: #333;
+      text-align: center;
+    }
+
     @media (max-width: 600px) {
       table, th, td {
         font-size: 14px;
       }
-
-      .input-container input, .input-container button {
+      input, select, button {
         font-size: 14px;
         padding: 8px;
       }
@@ -106,23 +128,57 @@
 <body>
   <h1>📚 Book Tracker</h1>
 
+  <!-- Book Adding Form -->
   <div class="input-container">
     <input type="text" id="bookName" placeholder="Enter book name">
     <input type="number" id="bookAmount" placeholder="Enter amount">
+    <select id="bookCategory">
+      <option value="">Select Category</option>
+      <option>Novel</option>
+      <option>Study</option>
+      <option>Comics</option>
+      <option>Magazine</option>
+      <option>Other</option>
+    </select>
     <button onclick="addBook()">Add Book</button>
     <button id="clearAllBtn" onclick="clearAllBooks()">Clear All Books</button>
+    <button id="exportBtn" onclick="exportToCSV()">Export to CSV</button>
+    
+    <!-- Import CSV -->
+    <input type="file" id="importFile" accept=".csv" style="margin-top:10px;">
+    <button id="importBtn" onclick="importFromCSV()">Import from CSV</button>
   </div>
 
+  <!-- Category & Search Tools -->
+  <div class="category-tools">
+    <label><b>Filter by Category:</b></label>
+    <select id="filterCategory" onchange="renderTable()">
+      <option value="All">All</option>
+    </select>
+
+    <label><b>Search by Book Name:</b></label>
+    <input type="text" id="searchBox" placeholder="Search books..." oninput="renderTable()">
+
+    <label><b>Rename Category:</b></label>
+    <select id="renameFrom"></select>
+    <input type="text" id="renameTo" placeholder="New category name">
+    <button onclick="renameCategory()">Rename Category</button>
+  </div>
+
+  <!-- Book Table -->
   <table id="bookTable">
     <thead>
       <tr>
         <th>Book Name</th>
         <th>Amount</th>
+        <th>Category</th>
         <th>Actions</th>
       </tr>
     </thead>
     <tbody></tbody>
   </table>
+
+  <div id="totalBooks">Total Books: 0</div>
 
   <script>
     let books = JSON.parse(localStorage.getItem("books")) || [];
@@ -131,10 +187,40 @@
       localStorage.setItem("books", JSON.stringify(books));
     }
 
+    function calculateTotal(filteredBooks) {
+      let total = filteredBooks.reduce((sum, book) => sum + Number(book.amount), 0);
+      document.getElementById("totalBooks").innerText = "Total Books: " + total;
+    }
+
+    function updateCategoryLists() {
+      let categories = [...new Set(books.map(b => b.category))].filter(c => c);
+
+      const filterSelect = document.getElementById("filterCategory");
+      const renameFromSelect = document.getElementById("renameFrom");
+
+      filterSelect.innerHTML = `<option value="All">All</option>`;
+      renameFromSelect.innerHTML = "";
+
+      categories.forEach(cat => {
+        filterSelect.innerHTML += `<option value="${cat}">${cat}</option>`;
+        renameFromSelect.innerHTML += `<option value="${cat}">${cat}</option>`;
+      });
+    }
+
     function renderTable() {
       const tbody = document.querySelector("#bookTable tbody");
       tbody.innerHTML = "";
-      books.forEach((book, index) => {
+
+      const selectedFilter = document.getElementById("filterCategory").value;
+      const searchQuery = document.getElementById("searchBox").value.toLowerCase();
+
+      let filteredBooks = books.filter(b => {
+        let matchesCategory = selectedFilter === "All" || b.category === selectedFilter;
+        let matchesSearch = b.name.toLowerCase().includes(searchQuery);
+        return matchesCategory && matchesSearch;
+      });
+
+      filteredBooks.forEach((book, index) => {
         const row = document.createElement("tr");
 
         row.innerHTML = `
@@ -144,6 +230,9 @@
           <td contenteditable="true" onblur="updateBook(${index}, 'amount', this.innerText)">
             ${book.amount}
           </td>
+          <td contenteditable="true" onblur="updateBook(${index}, 'category', this.innerText)">
+            ${book.category}
+          </td>
           <td>
             <button class="delete-btn" onclick="deleteBook(${index})">Delete</button>
           </td>
@@ -151,26 +240,32 @@
 
         tbody.appendChild(row);
       });
+
+      updateCategoryLists();
+      calculateTotal(filteredBooks);
     }
 
     function addBook() {
       const name = document.getElementById("bookName").value.trim();
       const amount = document.getElementById("bookAmount").value.trim();
+      const category = document.getElementById("bookCategory").value.trim();
 
-      if (name && amount) {
-        books.push({ name, amount });
+      if (name && amount && category) {
+        books.push({ name, amount, category });
         saveBooks();
         renderTable();
         document.getElementById("bookName").value = "";
         document.getElementById("bookAmount").value = "";
+        document.getElementById("bookCategory").value = "";
       } else {
-        alert("Please enter both book name and amount.");
+        alert("Please enter book name, amount, and category.");
       }
     }
 
     function updateBook(index, field, value) {
       books[index][field] = value;
       saveBooks();
+      renderTable();
     }
 
     function deleteBook(index) {
@@ -185,6 +280,76 @@
         saveBooks();
         renderTable();
       }
+    }
+
+    function renameCategory() {
+      const from = document.getElementById("renameFrom").value;
+      const to = document.getElementById("renameTo").value.trim();
+
+      if (!from || !to) {
+        alert("Please select a category and enter a new name.");
+        return;
+      }
+
+      books.forEach(book => {
+        if (book.category === from) {
+          book.category = to;
+        }
+      });
+
+      saveBooks();
+      renderTable();
+      document.getElementById("renameTo").value = "";
+    }
+
+    function exportToCSV() {
+      if (books.length === 0) {
+        alert("No books to export.");
+        return;
+      }
+
+      let csv = "Book Name,Amount,Category\n";
+      books.forEach(book => {
+        csv += `"${book.name}",${book.amount},"${book.category}"\n`;
+      });
+
+      const blob = new Blob([csv], { type: "text/csv" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "book_list.csv";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function importFromCSV() {
+      const fileInput = document.getElementById("importFile");
+      if (!fileInput.files.length) {
+        alert("Please choose a CSV file first.");
+        return;
+      }
+
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+
+      reader.onload = function(e) {
+        const lines = e.target.result.split("\n").map(line => line.trim()).filter(line => line);
+        const newBooks = [];
+
+        for (let i = 1; i < lines.length; i++) { // Skip header
+          const [name, amount, category] = lines[i].split(",").map(v => v.replace(/(^"|"$)/g, "").trim());
+          if (name && amount && category) {
+            newBooks.push({ name, amount: Number(amount), category });
+          }
+        }
+
+        books = books.concat(newBooks);
+        saveBooks();
+        renderTable();
+        fileInput.value = "";
+      };
+
+      reader.readAsText(file);
     }
 
     // Initial load
