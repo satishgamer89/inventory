@@ -3,29 +3,40 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>📚 Book Inventory</title>
+<title>📚 Book Inventory (Dynamic Users)</title>
 <style>
 body { font-family: Arial, sans-serif; background: #f0f4f8; margin:0; padding:20px; display:flex; flex-direction:column; align-items:center; }
 h1 { color:#333; }
-.input-container, .category-tools { width:100%; max-width:500px; display:flex; flex-direction:column; margin-bottom:20px; }
+.input-container, .user-container { width:100%; max-width:500px; display:flex; flex-direction:column; margin-bottom:20px; }
 input, select, button { margin:5px 0; padding:10px; font-size:16px; border-radius:5px; border:1px solid #ccc; }
 button { cursor:pointer; background-color:#4CAF50; color:white; border:none; transition:0.3s; }
 button:hover { background-color:#45a049; }
 #clearAllBtn { background-color:#f44336; } #clearAllBtn:hover { background-color:#e53935; }
-#exportBtn { background-color:#2196F3; } #exportBtn:hover { background-color:#1976D2; }
-#importBtn { background-color:#FF9800; } #importBtn:hover { background-color:#F57C00; }
 table { width:100%; max-width:750px; border-collapse:collapse; margin-top:20px; background:#fff; box-shadow:0 2px 6px rgba(0,0,0,0.1); }
 th, td { padding:12px; text-align:left; border-bottom:1px solid #ddd; word-break:break-word; }
 th { background-color:#f7f7f7; }
 .delete-btn { padding:6px 12px; cursor:pointer; background:#f44336; color:white; border:none; border-radius:4px; }
 .delete-btn:hover { background:#e53935; }
 #totalBooks { margin-top:15px; font-weight:bold; font-size:18px; color:#333; text-align:center; }
-@media (max-width:600px){ table, th, td { font-size:14px; } input, select, button { font-size:14px; padding:8px; } }
 </style>
 </head>
 <body>
+
 <h1>📚 Book Inventory</h1>
 
+<!-- User ID input -->
+<div class="user-container">
+<input type="text" id="userIdInput" placeholder="Enter your user ID">
+<button id="setUserBtn">Set User</button>
+</div>
+
+<!-- Allowed users management -->
+<div class="user-container">
+<input type="text" id="newUserInput" placeholder="Add new allowed user">
+<button id="addAllowedUserBtn">Add Allowed User</button>
+</div>
+
+<!-- Add book section -->
 <div class="input-container">
 <input type="text" id="bookName" placeholder="Enter book name">
 <input type="number" id="bookAmount" placeholder="Enter amount">
@@ -39,20 +50,6 @@ th { background-color:#f7f7f7; }
 </select>
 <button id="addBtn">Add Book</button>
 <button id="clearAllBtn">Clear All Books</button>
-<button id="exportBtn">Export CSV</button>
-<input type="file" id="importFile" accept=".csv">
-<button id="importBtn">Import CSV</button>
-</div>
-
-<div class="category-tools">
-<label><b>Filter:</b></label>
-<select id="filterCategory"><option value="All">All</option></select>
-<label><b>Search:</b></label>
-<input type="text" id="searchBox" placeholder="Search..." >
-<label><b>Rename Category:</b></label>
-<select id="renameFrom"></select>
-<input type="text" id="renameTo" placeholder="New category name">
-<button id="renameBtn">Rename</button>
 </div>
 
 <table id="bookTable">
@@ -64,9 +61,9 @@ th { background-color:#f7f7f7; }
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-import { getDatabase, ref, push, set, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { getDatabase, ref, push, set, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-// 🔹 Your Firebase config
+// Firebase config
 const firebaseConfig = {
     apiKey: "AIzaSyDqOE9GsfwOedcwbVIR_fmEMRERcm8ikF4",
     authDomain: "book-inventory-bd5ba.firebaseapp.com",
@@ -82,119 +79,86 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const booksRef = ref(db, 'books');
 
-// Add book
+let allowedUsers = ["admin", "editor1"]; // initial allowed users
+let currentUser = null;
+
+// Set current user
+document.getElementById('setUserBtn').addEventListener('click', ()=>{
+    const userId = document.getElementById('userIdInput').value.trim();
+    if(!userId){ alert("Enter a user ID"); return; }
+    currentUser = userId;
+    alert(`Hello ${currentUser}!`);
+});
+
+// Add new allowed user dynamically
+document.getElementById('addAllowedUserBtn').addEventListener('click', ()=>{
+    const newUser = document.getElementById('newUserInput').value.trim();
+    if(!newUser){ alert("Enter a user ID to add"); return; }
+    if(!allowedUsers.includes(newUser)){
+        allowedUsers.push(newUser);
+        alert(`User ${newUser} added to allowed users!`);
+    } else {
+        alert("User already allowed");
+    }
+    document.getElementById('newUserInput').value = '';
+});
+
+// Add book (only allowed users)
 document.getElementById('addBtn').addEventListener('click', ()=>{
-  const name = document.getElementById('bookName').value.trim();
-  const amount = document.getElementById('bookAmount').value.trim();
-  const category = document.getElementById('bookCategory').value.trim();
-  if(!name || !amount || !category){ alert("Fill all fields"); return; }
-  const newBookRef = push(booksRef);
-  set(newBookRef, {name, amount:Number(amount), category});
-  document.getElementById('bookName').value = '';
-  document.getElementById('bookAmount').value = '';
-  document.getElementById('bookCategory').value = '';
+    if(!currentUser || !allowedUsers.includes(currentUser)){ 
+        alert("You are not allowed to add books."); 
+        return; 
+    }
+    const name = document.getElementById('bookName').value.trim();
+    const amount = document.getElementById('bookAmount').value.trim();
+    const category = document.getElementById('bookCategory').value.trim();
+    if(!name || !amount || !category){ alert("Fill all fields"); return; }
+
+    const newBookRef = push(booksRef);
+    set(newBookRef, {name, amount:Number(amount), category, owner: currentUser});
+    document.getElementById('bookName').value='';
+    document.getElementById('bookAmount').value='';
+    document.getElementById('bookCategory').value='';
 });
 
-// Clear all books
+// Clear all books (only allowed users)
 document.getElementById('clearAllBtn').addEventListener('click', ()=>{
-  if(confirm("Delete all books?")) remove(booksRef);
+    if(!currentUser || !allowedUsers.includes(currentUser)){ alert("You are not allowed to clear books"); return; }
+    if(confirm("Delete all books?")) remove(booksRef);
 });
 
-// Rename category
-document.getElementById('renameBtn').addEventListener('click', ()=>{
-  const from = document.getElementById('renameFrom').value;
-  const to = document.getElementById('renameTo').value.trim();
-  if(!from || !to){ alert("Select and enter new category"); return; }
-  onValue(booksRef, snapshot => {
-    snapshot.forEach(child => {
-      const book = child.val();
-      if(book.category === from) update(ref(db, 'books/' + child.key), {category: to});
-    });
-  }, {onlyOnce:true});
-  document.getElementById('renameTo').value = '';
-});
-
-// Export CSV
-document.getElementById('exportBtn').addEventListener('click', ()=>{
-  onValue(booksRef, snapshot=>{
-    let csv = "Book Name,Amount,Category\n";
-    snapshot.forEach(child=>{
-      const b = child.val();
-      csv += `"${b.name}",${b.amount},"${b.category}"\n`;
-    });
-    const blob = new Blob([csv], {type:"text/csv"});
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'book_list.csv';
-    document.body.appendChild(link); link.click(); document.body.removeChild(link);
-  }, {onlyOnce:true});
-});
-
-// Import CSV
-document.getElementById('importBtn').addEventListener('click', ()=>{
-  const fileInput = document.getElementById('importFile');
-  if(!fileInput.files.length){ alert("Choose CSV first"); return; }
-  const file = fileInput.files[0];
-  const reader = new FileReader();
-  reader.onload = function(e){
-    const lines = e.target.result.split("\n").map(l=>l.trim()).filter(l=>l);
-    for(let i=1;i<lines.length;i++){
-      const [name, amount, category] = lines[i].split(",").map(v=>v.replace(/(^"|"$)/g,"").trim());
-      if(name && amount && category) push(booksRef).then(()=> set(ref(db, 'books/' + push(booksRef).key), {name, amount:Number(amount), category}));
-    }
-    fileInput.value='';
-  }
-  reader.readAsText(file);
-});
-
-// Update and Delete
-window.updateBook = function(id, field, value){
-  if(field==='amount') value = Number(value);
-  update(ref(db, 'books/' + id), {[field]: value});
+// Update/Delete functions with permissions
+window.updateBook = function(id, field, value, owner){
+    if(currentUser !== owner){ alert("You cannot edit this book"); return; }
+    if(field==='amount') value = Number(value);
+    update(ref(db, 'books/' + id), {[field]: value});
 }
-window.deleteBook = function(id){ remove(ref(db, 'books/' + id)); }
+window.deleteBook = function(id, owner){
+    if(currentUser !== owner){ alert("You cannot delete this book"); return; }
+    remove(ref(db, 'books/' + id));
+}
 
-// Render table on DB change
+// Render table
 onValue(booksRef, snapshot=>{
-  const tbody = document.querySelector("#bookTable tbody");
-  tbody.innerHTML = '';
-  let total = 0;
-  const filter = document.getElementById('filterCategory').value;
-  const search = document.getElementById('searchBox').value.toLowerCase();
-  const categories = new Set();
-
-  snapshot.forEach(child=>{
-    const b = child.val(); const id = child.key;
-    categories.add(b.category);
-    if((filter==='All'||b.category===filter) && b.name.toLowerCase().includes(search)){
-      total += Number(b.amount);
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td contenteditable="true" onblur="updateBook('${id}','name',this.innerText)">${b.name}</td>
-        <td contenteditable="true" onblur="updateBook('${id}','amount',this.innerText)">${b.amount}</td>
-        <td contenteditable="true" onblur="updateBook('${id}','category',this.innerText)">${b.category}</td>
-        <td><button class="delete-btn" onclick="deleteBook('${id}')">Delete</button></td>
-      `;
-      tbody.appendChild(row);
-    }
-  });
-
-  const filterSelect = document.getElementById('filterCategory');
-  const renameFromSelect = document.getElementById('renameFrom');
-  filterSelect.innerHTML = `<option value="All">All</option>`;
-  renameFromSelect.innerHTML = '';
-  categories.forEach(c=>{
-    filterSelect.innerHTML += `<option value="${c}">${c}</option>`;
-    renameFromSelect.innerHTML += `<option value="${c}">${c}</option>`;
-  });
-
-  document.getElementById('totalBooks').innerText = `Total Books: ${total}`;
+    const tbody = document.querySelector("#bookTable tbody");
+    tbody.innerHTML='';
+    let total = 0;
+    snapshot.forEach(child=>{
+        const b = child.val();
+        const id = child.key;
+        total += Number(b.amount);
+        const isOwner = (currentUser === b.owner);
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td contenteditable="${isOwner}" onblur="${isOwner ? `updateBook('${id}','name',this.innerText,'${b.owner}')` : ''}">${b.name}</td>
+            <td contenteditable="${isOwner}" onblur="${isOwner ? `updateBook('${id}','amount',this.innerText,'${b.owner}')` : ''}">${b.amount}</td>
+            <td>${b.category}</td>
+            <td>${isOwner ? `<button onclick="deleteBook('${id}','${b.owner}')">Delete</button>` : ''}</td>
+        `;
+        tbody.appendChild(row);
+    });
+    document.getElementById('totalBooks').innerText = `Total Books: ${total}`;
 });
-
-// Search and filter
-document.getElementById('searchBox').addEventListener('input', ()=>{ onValue(booksRef, snapshot => render(snapshot)); });
-document.getElementById('filterCategory').addEventListener('change', ()=>{ onValue(booksRef, snapshot => render(snapshot)); });
-
 </script>
 </body>
 </html>
