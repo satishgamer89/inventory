@@ -3,70 +3,63 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>📚 Book Tracker (Enhanced Mobile)</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+<title>📚 Book Tracker (Online)</title>
 <style>
+  /* General Styles */
   body { font-family: Arial, sans-serif; background: #f0f4f8; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-  h1 { color: #333; text-align: center; margin-bottom: 20px; }
+  h1 { color: #333; text-align: center; }
   
   /* Containers */
-  .input-container, .category-tools { width: 100%; max-width: 600px; display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 10px; box-shadow: 0 3px 6px rgba(0,0,0,0.1); }
+  .input-container, .category-tools { width: 100%; max-width: 600px; display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
   input, select, button { padding: 10px; font-size: 16px; border-radius: 5px; border: 1px solid #ccc; flex: 1 1 100%; }
-  button { cursor: pointer; transition: background 0.3s; display: flex; align-items: center; justify-content: center; gap:5px; }
-  button i { font-size: 16px; }
+  button { cursor: pointer; background-color: #4CAF50; color: white; border: none; transition: background 0.3s; }
+  button:hover { background-color: #45a049; }
+  #clearAllBtn { background-color: #f44336; } #clearAllBtn:hover { background-color: #e53935; }
+  #exportBtn { background-color: #2196F3; } #exportBtn:hover { background-color: #1976D2; }
+  #importBtn { background-color: #FF9800; } #importBtn:hover { background-color: #F57C00; }
 
-  #addBtn { background-color: #4CAF50; color: white; } #addBtn:hover { background-color: #45a049; }
-  #clearAllBtn { background-color: #f44336; color:white; } #clearAllBtn:hover { background-color: #e53935; }
-  #exportBtn { background-color: #2196F3; color:white; } #exportBtn:hover { background-color: #1976D2; }
-  #importBtn { background-color: #FF9800; color:white; } #importBtn:hover { background-color: #F57C00; }
-  #renameBtn { background-color: #9C27B0; color:white; } #renameBtn:hover { background-color: #7B1FA2; }
-
-  /* Table wrapper for horizontal scroll */
-  .table-wrapper { width: 100%; max-width: 100%; overflow-x: auto; border-radius:10px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
-
-  table { width: 100%; border-collapse: collapse; background: #fff; min-width: 600px; }
+  /* Table */
+  table { width: 100%; max-width: 100%; border-collapse: collapse; margin-top: 20px; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
   th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; word-break: break-word; }
   th { background-color: #f7f7f7; }
-  .delete-btn { padding: 6px 10px; cursor: pointer; background: #f44336; color: white; border: none; border-radius: 4px; display:flex; align-items:center; gap:5px; }
+  .delete-btn { padding: 6px 10px; cursor: pointer; background: #f44336; color: white; border: none; border-radius: 4px; }
   .delete-btn:hover { background: #e53935; }
 
   #totalBooks { margin-top: 15px; font-weight: bold; font-size: 18px; color: #333; text-align: center; }
 
-  /* Category colors */
-  .category-label { padding: 2px 6px; border-radius: 4px; color:white; font-weight: bold; display:inline-block; }
-  .Novel{background:#2196F3;} .Study{background:#4CAF50;} .Comics{background:#FF9800;} .Magazine{background:#9C27B0;} .Other{background:#607D8B;}
-
-  /* Responsive */
-  @media (min-width:500px){
+  /* Responsive Adjustments */
+  @media (min-width: 500px) {
     .input-container input, .input-container select, .input-container button,
-    .category-tools input, .category-tools select, .category-tools button { flex: 1 1 calc(50% - 10px); }
+    .category-tools input, .category-tools select, .category-tools button {
+      flex: 1 1 calc(50% - 10px);
+    }
     .input-container button, .category-tools button { flex: 1 1 100%; }
   }
-  @media (max-width:400px){
-    input, select, button { font-size:14px; padding:8px; }
-    th, td { font-size:14px; padding:8px; }
+  @media (max-width: 400px) {
+    input, select, button { font-size: 14px; padding: 8px; }
+    th, td { font-size: 14px; padding: 8px; }
   }
 </style>
 </head>
 <body>
-<h1>📚 Book Tracker (Enhanced Mobile)</h1>
+<h1>📚 Book Tracker (Mobile Friendly)</h1>
 
 <div class="input-container">
   <input type="text" id="bookName" placeholder="Book Name">
   <input type="number" id="bookAmount" placeholder="Amount">
   <select id="bookCategory">
     <option value="">Select Category</option>
-    <option>1st SEM</option>
-    <option>3rd SEM</option>
-    <option>5th SEM</option>
-    <option>7th SEM</option>
-    <option>Others</option>
+    <option>Novel</option>
+    <option>Study</option>
+    <option>Comics</option>
+    <option>Magazine</option>
+    <option>Other</option>
   </select>
-  <button id="addBtn" onclick="addBook()"><i class="fa fa-plus"></i>Add Book</button>
-  <button id="clearAllBtn" onclick="clearAllBooks()"><i class="fa fa-trash"></i>Clear All</button>
-  <button id="exportBtn" onclick="exportToCSV()"><i class="fa fa-file-export"></i>Export CSV</button>
+  <button onclick="addBook()">Add Book</button>
+  <button id="clearAllBtn" onclick="clearAllBooks()">Clear All Books</button>
+  <button id="exportBtn" onclick="exportToCSV()">Export CSV</button>
   <input type="file" id="importFile" accept=".csv">
-  <button id="importBtn" onclick="importFromCSV()"><i class="fa fa-file-import"></i>Import CSV</button>
+  <button id="importBtn" onclick="importFromCSV()">Import CSV</button>
 </div>
 
 <div class="category-tools">
@@ -74,25 +67,23 @@
   <input type="text" id="searchBox" placeholder="Search books..." oninput="renderTable()">
   <select id="renameFrom"></select>
   <input type="text" id="renameTo" placeholder="Rename Category">
-  <button id="renameBtn" onclick="renameCategory()"><i class="fa fa-edit"></i>Rename</button>
+  <button onclick="renameCategory()">Rename</button>
 </div>
 
-<div class="table-wrapper">
 <table id="bookTable">
 <thead>
 <tr><th>Name</th><th>Amount</th><th>Category</th><th>Actions</th></tr>
 </thead>
 <tbody></tbody>
 </table>
-</div>
 
 <div id="totalBooks">Total Books: 0</div>
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"></script>
 <script>
-// Firebase setup
-const firebaseConfig = { databaseURL:"https://book-inventory-bd5ba-default-rtdb.firebaseio.com/" };
+// Firebase
+const firebaseConfig = { databaseURL: "https://book-inventory-bd5ba-default-rtdb.firebaseio.com/" };
 const app = firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
@@ -108,7 +99,7 @@ function addBook(){
   document.getElementById("bookCategory").value="";
 }
 
-// Update, Delete, Clear
+// Update, Delete, Clear All
 function updateBook(id,field,value){ if(field==="amount") value=Number(value); db.ref("books/"+id+"/"+field).set(value); }
 function deleteBook(id){ db.ref("books/"+id).remove(); }
 function clearAllBooks(){ if(confirm("Delete all books?")) db.ref("books").remove(); }
@@ -119,7 +110,9 @@ function renameCategory(){
   const to=document.getElementById("renameTo").value.trim();
   if(!from||!to){ alert("Select & enter new category."); return; }
   db.ref("books").once("value",snap=>{
-    snap.forEach(c=>{ if(c.val().category===from) db.ref("books/"+c.key+"/category").set(to); });
+    snap.forEach(c=>{
+      if(c.val().category===from) db.ref("books/"+c.key+"/category").set(to);
+    });
   }); document.getElementById("renameTo").value="";
 }
 
@@ -128,8 +121,7 @@ function exportToCSV(){
   db.ref("books").once("value",snap=>{
     let csv="Book Name,Amount,Category\n";
     snap.forEach(c=>{ const b=c.val(); csv+=`"${b.name}",${b.amount},"${b.category}"\n`; });
-    const blob=new Blob([csv],{type:"text/csv"});
-    const link=document.createElement("a");
+    const blob=new Blob([csv],{type:"text/csv"}); const link=document.createElement("a");
     link.href=URL.createObjectURL(blob); link.download="book_list.csv"; document.body.appendChild(link); link.click(); document.body.removeChild(link);
   });
 }
@@ -149,7 +141,7 @@ function importFromCSV(){
   reader.readAsText(file);
 }
 
-// Render Table
+// Render table
 function renderTable(snapshot){
   const tbody=document.querySelector("#bookTable tbody"); tbody.innerHTML="";
   const filter=document.getElementById("filterCategory").value; const search=document.getElementById("searchBox").value.toLowerCase();
@@ -161,8 +153,8 @@ function renderTable(snapshot){
       const row=document.createElement("tr");
       row.innerHTML=`<td contenteditable="true" onblur="updateBook('${id}','name',this.innerText)">${b.name}</td>
       <td contenteditable="true" onblur="updateBook('${id}','amount',this.innerText)">${b.amount}</td>
-      <td><span class="category-label ${b.category}">${b.category}</span></td>
-      <td><button class="delete-btn" onclick="deleteBook('${id}')"><i class="fa fa-trash"></i>Delete</button></td>`;
+      <td contenteditable="true" onblur="updateBook('${id}','category',this.innerText)">${b.category}</td>
+      <td><button class="delete-btn" onclick="deleteBook('${id}')">Delete</button></td>`;
       tbody.appendChild(row);
     }
   });
@@ -172,7 +164,7 @@ function renderTable(snapshot){
   document.getElementById("totalBooks").innerText="Total Books: "+total;
 }
 
-// Firebase listener
+// Listen to Firebase
 db.ref("books").on("value",snap=>{ renderTable(snap); });
 </script>
 </body>
