@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>📚 Book Inventory</title>
+<title>ðŸ“š Book Inventory</title>
 <style>
 body { font-family: Arial, sans-serif; background: #f0f4f8; margin:0; padding:20px; display:flex; flex-direction:column; align-items:center; }
 h1 { color:#333; }
@@ -24,12 +24,19 @@ th { background-color:#f7f7f7; }
 </style>
 </head>
 <body>
-<h1>📚 Book Inventory</h1>
+<h1>ðŸ“š Book Inventory</h1>
 
 <div class="input-container">
 <input type="text" id="bookName" placeholder="Enter book name">
 <input type="number" id="bookAmount" placeholder="Enter amount">
-<select id="bookCategory"><option value="">Select Category</option></select>
+<select id="bookCategory">
+<option value="">Select Category</option>
+<option>1st SEM</option>
+<option>3rd SEM</option>
+<option>5th SEM</option>
+<option>7th SEM</option>
+<option>Other</option>
+</select>
 <button id="addBtn">Add Book</button>
 <button id="clearAllBtn">Clear All Books</button>
 <button id="exportBtn">Export CSV</button>
@@ -40,14 +47,8 @@ th { background-color:#f7f7f7; }
 <div class="category-tools">
 <label><b>Filter:</b></label>
 <select id="filterCategory"><option value="All">All</option></select>
-
 <label><b>Search:</b></label>
 <input type="text" id="searchBox" placeholder="Search..." >
-
-<label><b>Add Category:</b></label>
-<input type="text" id="newCategory" placeholder="New category name">
-<button id="addCategoryBtn">Add Category</button>
-
 <label><b>Rename Category:</b></label>
 <select id="renameFrom"></select>
 <input type="text" id="renameTo" placeholder="New category name">
@@ -80,43 +81,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const booksRef = ref(db, 'books');
-const categoriesRef = ref(db, 'categories');
 let latestSnapshot = null;
-
-// Utility: update dropdowns with categories
-function updateCategoryDropdowns(catList){
-  const bookCat = document.getElementById('bookCategory');
-  const filterCat = document.getElementById('filterCategory');
-  const renameCat = document.getElementById('renameFrom');
-
-  bookCat.innerHTML = `<option value="">Select Category</option>`;
-  filterCat.innerHTML = `<option value="All">All</option>`;
-  renameCat.innerHTML = '';
-
-  catList.forEach(cat=>{
-    const opt1 = document.createElement('option'); opt1.value = opt1.textContent = cat; bookCat.appendChild(opt1);
-    const opt2 = document.createElement('option'); opt2.value = opt2.textContent = cat; filterCat.appendChild(opt2);
-    const opt3 = document.createElement('option'); opt3.value = opt3.textContent = cat; renameCat.appendChild(opt3);
-  });
-}
-
-// Load categories from Firebase
-function loadCategories(){
-  onValue(categoriesRef, snapshot=>{
-    const catList = [];
-    snapshot.forEach(child => catList.push(child.val()));
-    updateCategoryDropdowns(catList);
-  });
-}
-
-// Add new category
-document.getElementById('addCategoryBtn').addEventListener('click', ()=>{
-  const newCat = document.getElementById('newCategory').value.trim();
-  if(!newCat){ alert("Enter category name"); return; }
-
-  push(categoriesRef, newCat); // Save in Firebase
-  document.getElementById('newCategory').value='';
-});
 
 // Add book
 document.getElementById('addBtn').addEventListener('click', ()=>{
@@ -142,18 +107,10 @@ document.getElementById('renameBtn').addEventListener('click', ()=>{
   const to = document.getElementById('renameTo').value.trim();
   if(!from || !to){ alert("Select and enter new category"); return; }
   if(!latestSnapshot) return;
-  latestSnapshot.forEach(child=>{
+  latestSnapshot.forEach(child => {
     const book = child.val();
-    if(book.category===from) update(ref(db, 'books/' + child.key), {category: to});
+    if(book.category === from) update(ref(db, 'books/' + child.key), {category: to});
   });
-
-  // Update category in Firebase
-  onValue(categoriesRef, snapshot=>{
-    snapshot.forEach(child=>{
-      if(child.val()===from) update(ref(db, 'categories/' + child.key), to);
-    });
-  }, {onlyOnce:true});
-
   document.getElementById('renameTo').value='';
 });
 
@@ -189,20 +146,20 @@ document.getElementById('importBtn').addEventListener('click', ()=>{
   reader.readAsText(file);
 });
 
-// Update/Delete
+// Update/Delete functions
 window.updateBook = function(id, field, value){
   if(field==='amount') value = Number(value);
   update(ref(db, 'books/' + id), {[field]: value});
 }
 window.deleteBook = function(id){ remove(ref(db, 'books/' + id)); }
 
-// Listen to DB changes for books
+// Listen to DB and store snapshot
 onValue(booksRef, snapshot=>{
   latestSnapshot = snapshot;
   renderTable();
 });
 
-// Render table
+// Render table function with filter & search
 function renderTable(){
   if(!latestSnapshot) return;
   const tbody = document.querySelector("#bookTable tbody");
@@ -210,13 +167,13 @@ function renderTable(){
   const filter = document.getElementById('filterCategory').value;
   const search = document.getElementById('searchBox').value.toLowerCase();
   let total=0;
-  const categoriesSet = new Set();
+  const categories = new Set();
 
   latestSnapshot.forEach(child=>{
     const b = child.val(); const id = child.key;
-    categoriesSet.add(b.category);
-    if((filter==='All'||b.category===filter) && b.name.toLowerCase().includes(search)){
-      total+=Number(b.amount);
+    categories.add(b.category);
+    if((filter==='All' || b.category===filter) && b.name.toLowerCase().includes(search)){
+      total += Number(b.amount);
       const row = document.createElement('tr');
       row.innerHTML = `
         <td contenteditable="true" onblur="updateBook('${id}','name',this.innerText)">${b.name}</td>
@@ -228,15 +185,21 @@ function renderTable(){
     }
   });
 
+  const filterSelect = document.getElementById('filterCategory');
+  const renameFromSelect = document.getElementById('renameFrom');
+  filterSelect.innerHTML=`<option value="All">All</option>`;
+  renameFromSelect.innerHTML='';
+  categories.forEach(c=>{
+    filterSelect.innerHTML += `<option value="${c}">${c}</option>`;
+    renameFromSelect.innerHTML += `<option value="${c}">${c}</option>`;
+  });
+
   document.getElementById('totalBooks').innerText = `Total Books: ${total}`;
 }
 
 // Search/filter triggers
 document.getElementById('searchBox').addEventListener('input', renderTable);
 document.getElementById('filterCategory').addEventListener('change', renderTable);
-
-// Load categories on startup
-loadCategories();
 
 </script>
 </body>
