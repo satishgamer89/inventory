@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>📚 Book Tracker </title>
+<title>📚 Book Tracker (Firebase)</title>
 <style>
 body { font-family: Arial, sans-serif; background: #f0f4f8; margin:0; padding:20px; display:flex; flex-direction:column; align-items:center; }
 h1 { color:#333; }
@@ -24,17 +24,17 @@ th { background-color:#f7f7f7; }
 </style>
 </head>
 <body>
-<h1>📚 Book Tracker </h1>
+<h1>📚 Book Tracker (Firebase)</h1>
 
 <div class="input-container">
 <input type="text" id="bookName" placeholder="Enter book name">
 <input type="number" id="bookAmount" placeholder="Enter amount">
 <select id="bookCategory">
 <option value="">Select Category</option>
-<option>1st SEM</option>
-<option>3rd SEM</option>
-<option>5th SEM</option>
-<option>7th SEM</option>
+<option>Novel</option>
+<option>Study</option>
+<option>Comics</option>
+<option>Magazine</option>
 <option>Other</option>
 </select>
 <button onclick="addBook()">Add Book</button>
@@ -73,15 +73,16 @@ th { background-color:#f7f7f7; }
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"></script>
 
 <script>
-// ✅ Proper Firebase config (replace apiKey/projectId with dummy values)
+// 🔹 Firebase config (your provided real config)
 const firebaseConfig = {
-  apiKey: "DUMMY_API_KEY_123456",
-  authDomain: "dummy-project.firebaseapp.com",
-  databaseURL: "https://book-inventory-bd5ba-default-rtdb.firebaseio.com",
-  projectId: "dummy-project",
-  storageBucket: "dummy-project.appspot.com",
-  messagingSenderId: "1234567890",
-  appId: "1:1234567890:web:abcdef123456"
+    apiKey: "AIzaSyDqOE9GsfwOedcwbVIR_fmEMRERcm8ikF4",
+    authDomain: "book-inventory-bd5ba.firebaseapp.com",
+    databaseURL: "https://book-inventory-bd5ba-default-rtdb.firebaseio.com",
+    projectId: "book-inventory-bd5ba",
+    storageBucket: "book-inventory-bd5ba.firebasestorage.app",
+    messagingSenderId: "778702930923",
+    appId: "1:778702930923:web:34a672ffda2eaa764f4fae",
+    measurementId: "G-MW8W0RSYY2"
 };
 
 const app = firebase.initializeApp(firebaseConfig);
@@ -89,10 +90,10 @@ const db = firebase.database();
 
 // Add book
 function addBook(){
-  const name=document.getElementById("bookName").value.trim();
-  const amount=document.getElementById("bookAmount").value.trim();
-  const category=document.getElementById("bookCategory").value.trim();
-  if(!name||!amount||!category){ alert("Fill all fields"); return; }
+  const name = document.getElementById("bookName").value.trim();
+  const amount = document.getElementById("bookAmount").value.trim();
+  const category = document.getElementById("bookCategory").value.trim();
+  if(!name || !amount || !category){ alert("Fill all fields"); return; }
   db.ref("books").push({name, amount:Number(amount), category});
   document.getElementById("bookName").value="";
   document.getElementById("bookAmount").value="";
@@ -101,7 +102,7 @@ function addBook(){
 
 // Update book
 function updateBook(id, field, value){
-  if(field==="amount") value=Number(value);
+  if(field==="amount") value = Number(value);
   db.ref("books/"+id+"/"+field).set(value);
 }
 
@@ -118,8 +119,8 @@ function renameCategory(){
   if(!from||!to){ alert("Select and enter new category"); return; }
   db.ref("books").once("value", snapshot=>{
     snapshot.forEach(child=>{
-      const book=child.val();
-      if(book.category===from) db.ref("books/"+child.key+"/category").set(to);
+      const book = child.val();
+      if(book.category === from) db.ref("books/"+child.key+"/category").set(to);
     });
   });
   document.getElementById("renameTo").value="";
@@ -144,7 +145,7 @@ function exportToCSV(){
 // Import CSV
 function importFromCSV(){
   const fileInput=document.getElementById("importFile");
-  if(!fileInput.files.length){ alert("Choose CSV first"); return; }
+  if(!fileInput.files.length){ alert("Choose CSV first."); return; }
   const file=fileInput.files[0]; const reader=new FileReader();
   reader.onload=function(e){
     const lines=e.target.result.split("\n").map(l=>l.trim()).filter(l=>l);
@@ -170,7 +171,7 @@ function renderTable(snapshot){
   snapshot.forEach(child=>{
     const b=child.val(); const id=child.key;
     categories.add(b.category);
-    if((filter==="All"||b.category===filter)&&b.name.toLowerCase().includes(search)){
+    if((filter==="All"||b.category===filter) && b.name.toLowerCase().includes(search)){
       total+=Number(b.amount);
       const row=document.createElement("tr");
       row.innerHTML=`<td contenteditable="true" onblur="updateBook('${id}','name',this.innerText)">${b.name}</td>
@@ -194,7 +195,7 @@ function renderTable(snapshot){
 }
 
 // Listen for DB changes
-db.ref("books").on("value", snapshot=>renderTable(snapshot));
+db.ref("books").on("value", snapshot => renderTable(snapshot));
 </script>
 </body>
 </html>
