@@ -5,48 +5,29 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>📚 Book Tracker (Online)</title>
 <style>
-  /* General Styles */
   body { font-family: Arial, sans-serif; background: #f0f4f8; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-  h1 { color: #333; text-align: center; }
-  
-  /* Containers */
-  .input-container, .category-tools { width: 100%; max-width: 600px; display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
-  input, select, button { padding: 10px; font-size: 16px; border-radius: 5px; border: 1px solid #ccc; flex: 1 1 100%; }
+  h1 { color: #333; }
+  .input-container, .category-tools { width: 100%; max-width: 500px; display: flex; flex-direction: column; margin-bottom: 20px; }
+  input, select, button { margin: 5px 0; padding: 10px; font-size: 16px; border-radius: 5px; border: 1px solid #ccc; }
   button { cursor: pointer; background-color: #4CAF50; color: white; border: none; transition: background 0.3s; }
   button:hover { background-color: #45a049; }
-  #clearAllBtn { background-color: #f44336; } #clearAllBtn:hover { background-color: #e53935; }
-  #exportBtn { background-color: #2196F3; } #exportBtn:hover { background-color: #1976D2; }
-  #importBtn { background-color: #FF9800; } #importBtn:hover { background-color: #F57C00; }
-
-  /* Table */
-  table { width: 100%; max-width: 100%; border-collapse: collapse; margin-top: 20px; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
-  th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; word-break: break-word; }
+  #clearAllBtn { background-color: #f44336; margin-top: 10px; } #clearAllBtn:hover { background-color: #e53935; }
+  #exportBtn { background-color: #2196F3; margin-top: 10px; } #exportBtn:hover { background-color: #1976D2; }
+  #importBtn { background-color: #FF9800; margin-top: 10px; } #importBtn:hover { background-color: #F57C00; }
+  table { width: 100%; max-width: 750px; border-collapse: collapse; margin-top: 20px; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+  th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; word-break: break-word; }
   th { background-color: #f7f7f7; }
-  .delete-btn { padding: 6px 10px; cursor: pointer; background: #f44336; color: white; border: none; border-radius: 4px; }
+  .delete-btn { padding: 6px 12px; cursor: pointer; background: #f44336; color: white; border: none; border-radius: 4px; }
   .delete-btn:hover { background: #e53935; }
-
   #totalBooks { margin-top: 15px; font-weight: bold; font-size: 18px; color: #333; text-align: center; }
-
-  /* Responsive Adjustments */
-  @media (min-width: 500px) {
-    .input-container input, .input-container select, .input-container button,
-    .category-tools input, .category-tools select, .category-tools button {
-      flex: 1 1 calc(50% - 10px);
-    }
-    .input-container button, .category-tools button { flex: 1 1 100%; }
-  }
-  @media (max-width: 400px) {
-    input, select, button { font-size: 14px; padding: 8px; }
-    th, td { font-size: 14px; padding: 8px; }
-  }
 </style>
 </head>
 <body>
-<h1>📚 Book Tracker (Mobile Friendly)</h1>
+<h1>📚 Book Tracker (Online)</h1>
 
 <div class="input-container">
-  <input type="text" id="bookName" placeholder="Book Name">
-  <input type="number" id="bookAmount" placeholder="Amount">
+  <input type="text" id="bookName" placeholder="Enter book name">
+  <input type="number" id="bookAmount" placeholder="Enter amount">
   <select id="bookCategory">
     <option value="">Select Category</option>
     <option>Novel</option>
@@ -57,22 +38,30 @@
   </select>
   <button onclick="addBook()">Add Book</button>
   <button id="clearAllBtn" onclick="clearAllBooks()">Clear All Books</button>
-  <button id="exportBtn" onclick="exportToCSV()">Export CSV</button>
-  <input type="file" id="importFile" accept=".csv">
-  <button id="importBtn" onclick="importFromCSV()">Import CSV</button>
+  <button id="exportBtn" onclick="exportToCSV()">Export to CSV</button>
+  <input type="file" id="importFile" accept=".csv" style="margin-top:10px;">
+  <button id="importBtn" onclick="importFromCSV()">Import from CSV</button>
 </div>
 
 <div class="category-tools">
-  <select id="filterCategory" onchange="renderTable()"><option value="All">All Categories</option></select>
+  <label><b>Filter by Category:</b></label>
+  <select id="filterCategory" onchange="renderTable()"><option value="All">All</option></select>
+  <label><b>Search:</b></label>
   <input type="text" id="searchBox" placeholder="Search books..." oninput="renderTable()">
+  <label><b>Rename Category:</b></label>
   <select id="renameFrom"></select>
-  <input type="text" id="renameTo" placeholder="Rename Category">
-  <button onclick="renameCategory()">Rename</button>
+  <input type="text" id="renameTo" placeholder="New category name">
+  <button onclick="renameCategory()">Rename Category</button>
 </div>
 
 <table id="bookTable">
 <thead>
-<tr><th>Name</th><th>Amount</th><th>Category</th><th>Actions</th></tr>
+<tr>
+  <th>Book Name</th>
+  <th>Amount</th>
+  <th>Category</th>
+  <th>Actions</th>
+</tr>
 </thead>
 <tbody></tbody>
 </table>
@@ -81,73 +70,98 @@
 
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js"></script>
+
 <script>
-// Firebase
-const firebaseConfig = { databaseURL: "https://book-inventory-bd5ba-default-rtdb.firebaseio.com/" };
+// Firebase config
+const firebaseConfig = {
+  databaseURL: "https://book-inventory-bd5ba-default-rtdb.firebaseio.com/"
+};
 const app = firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 // Add book
-function addBook(){
-  const name=document.getElementById("bookName").value.trim();
-  const amount=document.getElementById("bookAmount").value.trim();
-  const category=document.getElementById("bookCategory").value.trim();
-  if(!name||!amount||!category){ alert("Fill all fields."); return; }
-  db.ref("books").push().set({name,amount:Number(amount),category});
+function addBook() {
+  const name = document.getElementById("bookName").value.trim();
+  const amount = document.getElementById("bookAmount").value.trim();
+  const category = document.getElementById("bookCategory").value.trim();
+  if(!name || !amount || !category){ alert("Fill all fields."); return; }
+  const newBookRef = db.ref("books").push();
+  newBookRef.set({name, amount:Number(amount), category});
   document.getElementById("bookName").value="";
   document.getElementById("bookAmount").value="";
   document.getElementById("bookCategory").value="";
 }
 
-// Update, Delete, Clear All
-function updateBook(id,field,value){ if(field==="amount") value=Number(value); db.ref("books/"+id+"/"+field).set(value); }
+// Update book
+function updateBook(id, field, value){
+  if(field==="amount") value=Number(value);
+  db.ref("books/"+id+"/"+field).set(value);
+}
+
+// Delete book
 function deleteBook(id){ db.ref("books/"+id).remove(); }
+
+// Clear all books
 function clearAllBooks(){ if(confirm("Delete all books?")) db.ref("books").remove(); }
 
-// Rename Category
+// Rename category
 function renameCategory(){
   const from=document.getElementById("renameFrom").value;
   const to=document.getElementById("renameTo").value.trim();
-  if(!from||!to){ alert("Select & enter new category."); return; }
-  db.ref("books").once("value",snap=>{
-    snap.forEach(c=>{
-      if(c.val().category===from) db.ref("books/"+c.key+"/category").set(to);
+  if(!from || !to){ alert("Select and enter new category."); return; }
+  db.ref("books").once("value", snapshot=>{
+    snapshot.forEach(child=>{
+      const book=child.val();
+      if(book.category===from) db.ref("books/"+child.key+"/category").set(to);
     });
-  }); document.getElementById("renameTo").value="";
+  });
+  document.getElementById("renameTo").value="";
 }
 
 // Export CSV
 function exportToCSV(){
-  db.ref("books").once("value",snap=>{
+  db.ref("books").once("value", snapshot=>{
     let csv="Book Name,Amount,Category\n";
-    snap.forEach(c=>{ const b=c.val(); csv+=`"${b.name}",${b.amount},"${b.category}"\n`; });
-    const blob=new Blob([csv],{type:"text/csv"}); const link=document.createElement("a");
-    link.href=URL.createObjectURL(blob); link.download="book_list.csv"; document.body.appendChild(link); link.click(); document.body.removeChild(link);
+    snapshot.forEach(child=>{
+      const b=child.val();
+      csv+=`"${b.name}",${b.amount},"${b.category}"\n`;
+    });
+    const blob=new Blob([csv],{type:"text/csv"});
+    const link=document.createElement("a");
+    link.href=URL.createObjectURL(blob);
+    link.download="book_list.csv";
+    document.body.appendChild(link); link.click(); document.body.removeChild(link);
   });
 }
 
 // Import CSV
 function importFromCSV(){
-  const file=document.getElementById("importFile").files[0]; if(!file){ alert("Choose CSV first"); return; }
-  const reader=new FileReader();
-  reader.onload=e=>{
+  const fileInput=document.getElementById("importFile");
+  if(!fileInput.files.length){ alert("Choose CSV first."); return; }
+  const file=fileInput.files[0]; const reader=new FileReader();
+  reader.onload=function(e){
     const lines=e.target.result.split("\n").map(l=>l.trim()).filter(l=>l);
     for(let i=1;i<lines.length;i++){
       const [name,amount,category]=lines[i].split(",").map(v=>v.replace(/(^"|"$)/g,"").trim());
-      if(name && amount && category) db.ref("books").push().set({name,amount:Number(amount),category});
+      if(name && amount && category){
+        db.ref("books").push().set({name,amount:Number(amount),category});
+      }
     }
-    document.getElementById("importFile").value="";
+    fileInput.value="";
   };
   reader.readAsText(file);
 }
 
 // Render table
 function renderTable(snapshot){
-  const tbody=document.querySelector("#bookTable tbody"); tbody.innerHTML="";
-  const filter=document.getElementById("filterCategory").value; const search=document.getElementById("searchBox").value.toLowerCase();
+  const tbody=document.querySelector("#bookTable tbody");
+  tbody.innerHTML="";
+  const filter=document.getElementById("filterCategory").value;
+  const search=document.getElementById("searchBox").value.toLowerCase();
   let total=0; const categories=new Set();
   snapshot.forEach(child=>{
-    const b=child.val(); const id=child.key; categories.add(b.category);
+    const b=child.val(); const id=child.key;
+    categories.add(b.category);
     if((filter==="All"||b.category===filter)&&b.name.toLowerCase().includes(search)){
       total+=Number(b.amount);
       const row=document.createElement("tr");
@@ -158,14 +172,16 @@ function renderTable(snapshot){
       tbody.appendChild(row);
     }
   });
-  const filterSelect=document.getElementById("filterCategory"); const renameFromSelect=document.getElementById("renameFrom");
-  filterSelect.innerHTML=`<option value="All">All Categories</option>`; renameFromSelect.innerHTML="";
+  const filterSelect=document.getElementById("filterCategory");
+  const renameFromSelect=document.getElementById("renameFrom");
+  filterSelect.innerHTML=`<option value="All">All</option>`;
+  renameFromSelect.innerHTML="";
   categories.forEach(c=>{ filterSelect.innerHTML+=`<option value="${c}">${c}</option>`; renameFromSelect.innerHTML+=`<option value="${c}">${c}</option>`; });
   document.getElementById("totalBooks").innerText="Total Books: "+total;
 }
 
-// Listen to Firebase
-db.ref("books").on("value",snap=>{ renderTable(snap); });
+// Listen to DB changes
+db.ref("books").on("value", snapshot=>{ renderTable(snapshot); });
 </script>
 </body>
 </html>
