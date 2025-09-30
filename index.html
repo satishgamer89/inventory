@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Book Inventory</title>
+<title>📚 Book Inventory</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -114,7 +114,7 @@ th {
 </style>
 </head>
 <body>
-<h1>Book Inventory</h1>
+<h1>📚 Book Inventory</h1>
 
 <div class="input-container">
   <input type="text" id="bookName" placeholder="Enter book name">
@@ -142,11 +142,6 @@ th {
 
   <label><b>Search:</b></label>
   <input type="text" id="searchBox" placeholder="Search...">
-
-  <label><b>Rename Category:</b></label>
-  <select id="renameFrom"></select>
-  <input type="text" id="renameTo" placeholder="New category name">
-  <button id="renameBtn">Rename</button>
 </div>
 
 <table id="bookTable">
@@ -159,7 +154,6 @@ th {
 <div id="totalBooks">Total Books: 0</div>
 
 <script type="module">
-// All your previous Firebase code remains intact
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getDatabase, ref, push, set, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
@@ -179,7 +173,7 @@ const db = getDatabase(app);
 const booksRef = ref(db, 'books');
 let latestSnapshot = null;
 
-// All your existing functions for add, delete, update, rename, import/export remain unchanged
+// Add book
 document.getElementById('addBtn').addEventListener('click', ()=>{
   const name = document.getElementById('bookName').value.trim();
   const amount = document.getElementById('bookAmount').value.trim();
@@ -192,22 +186,12 @@ document.getElementById('addBtn').addEventListener('click', ()=>{
   document.getElementById('bookCategory').value='';
 });
 
+// Clear all books
 document.getElementById('clearAllBtn').addEventListener('click', ()=>{
   if(confirm("Delete all books?")) remove(booksRef);
 });
 
-document.getElementById('renameBtn').addEventListener('click', ()=>{
-  const from = document.getElementById('renameFrom').value;
-  const to = document.getElementById('renameTo').value.trim();
-  if(!from || !to){ alert("Select and enter new category"); return; }
-  if(!latestSnapshot) return;
-  latestSnapshot.forEach(child => {
-    const book = child.val();
-    if(book.category === from) update(ref(db, 'books/' + child.key), {category: to});
-  });
-  document.getElementById('renameTo').value='';
-});
-
+// Export CSV
 document.getElementById('exportBtn').addEventListener('click', ()=>{
   if(!latestSnapshot) return;
   let csv = "Book Name,Amount,Category\n";
@@ -222,33 +206,40 @@ document.getElementById('exportBtn').addEventListener('click', ()=>{
   document.body.appendChild(link); link.click(); document.body.removeChild(link);
 });
 
+// Import CSV (fixed auto-vanish)
 document.getElementById('importBtn').addEventListener('click', ()=>{
   const fileInput = document.getElementById('importFile');
   if(!fileInput.files.length){ alert("Choose CSV first."); return; }
   const file = fileInput.files[0];
   const reader = new FileReader();
   reader.onload = function(e){
-    const lines = e.target.result.split("\n").map(l=>l.trim()).filter(l=>l);
-    for(let i=1;i<lines.length;i++){
-      const [name, amount, category] = lines[i].split(",").map(v=>v.replace(/(^"|"$)/g,"").trim());
-      if(name && amount && category) push(booksRef).then(()=> set(ref(db, 'books/' + push(booksRef).key), {name, amount:Number(amount), category}));
+    const lines = e.target.result.split("\n").map(l => l.trim()).filter(l => l);
+    for(let i = 1; i < lines.length; i++){
+      const [name, amount, category] = lines[i].split(",").map(v => v.replace(/(^"|"$)/g,"").trim());
+      if(name && amount && category){
+        const newBookRef = push(booksRef);
+        set(newBookRef, {name, amount:Number(amount), category});
+      }
     }
     fileInput.value='';
   }
   reader.readAsText(file);
 });
 
+// Update/Delete functions
 window.updateBook = function(id, field, value){
   if(field==='amount') value = Number(value);
   update(ref(db, 'books/' + id), {[field]: value});
 }
 window.deleteBook = function(id){ remove(ref(db, 'books/' + id)); }
 
+// Listen to DB changes
 onValue(booksRef, snapshot=>{
   latestSnapshot = snapshot;
   renderTable();
 });
 
+// Render table
 function renderTable(){
   if(!latestSnapshot) return;
   const tbody = document.querySelector("#bookTable tbody");
@@ -275,17 +266,15 @@ function renderTable(){
   });
 
   const filterSelect = document.getElementById('filterCategory');
-  const renameFromSelect = document.getElementById('renameFrom');
   filterSelect.innerHTML=`<option value="All">All</option>`;
-  renameFromSelect.innerHTML='';
   categories.forEach(c=>{
     filterSelect.innerHTML += `<option value="${c}">${c}</option>`;
-    renameFromSelect.innerHTML += `<option value="${c}">${c}</option>`;
   });
 
   document.getElementById('totalBooks').innerText = `Total Books: ${total}`;
 }
 
+// Search & filter
 document.getElementById('searchBox').addEventListener('input', renderTable);
 document.getElementById('filterCategory').addEventListener('change', renderTable);
 
