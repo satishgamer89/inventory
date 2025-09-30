@@ -6,57 +6,25 @@
 <title>📚 Book Inventory</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-
 body { 
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
   background: #f5f7fa; 
-  display: flex; 
-  flex-direction: column; 
+  display: flex; flex-direction: column; 
   align-items: center; 
-  padding: 20px; 
-  min-height: 100vh; 
+  padding: 20px; min-height: 100vh; 
 }
-
-h1 { 
-  color: #333; 
-  margin-bottom: 20px; 
-  font-size: 2rem; 
-}
-
+h1 { color: #333; margin-bottom: 20px; font-size: 2rem; }
 .input-container, .category-tools { 
-  width: 100%; 
-  max-width: 600px; 
-  background: #fff; 
-  padding: 20px; 
-  border-radius: 12px; 
-  box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
-  margin-bottom: 20px; 
-  display: flex; 
-  flex-direction: column; 
-  gap: 10px; 
+  width: 100%; max-width: 600px; 
+  background: #fff; padding: 20px; 
+  border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
+  margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; 
 }
-
 input, select, button { 
-  padding: 12px; 
-  font-size: 1rem; 
-  border-radius: 8px; 
-  border: 1px solid #ccc; 
+  padding: 12px; font-size: 1rem; border-radius: 8px; border: 1px solid #ccc; 
 }
-
-input:focus, select:focus { 
-  outline: none; 
-  border-color: #4CAF50; 
-}
-
-button { 
-  cursor: pointer; 
-  background-color: #4CAF50; 
-  color: #fff; 
-  border: none; 
-  transition: 0.3s; 
-  border-radius: 8px;
-}
-
+input:focus, select:focus { outline: none; border-color: #4CAF50; }
+button { cursor: pointer; background-color: #4CAF50; color: #fff; border: none; transition: 0.3s; border-radius: 8px; }
 button:hover { background-color: #45a049; }
 button.secondary { background-color: #f44336; }
 button.secondary:hover { background-color: #e53935; }
@@ -64,48 +32,12 @@ button.info { background-color: #2196F3; }
 button.info:hover { background-color: #1976D2; }
 button.warning { background-color: #FF9800; }
 button.warning:hover { background-color: #F57C00; }
-
-table { 
-  width: 100%; 
-  max-width: 700px; 
-  border-collapse: collapse; 
-  background: #fff; 
-  border-radius: 12px; 
-  overflow: hidden; 
-  box-shadow: 0 4px 10px rgba(0,0,0,0.05); 
-}
-
-th, td { 
-  padding: 14px 12px; 
-  text-align: left; 
-  border-bottom: 1px solid #eee; 
-}
-
-th { 
-  background-color: #f4f6f8; 
-  font-weight: 600; 
-}
-
-.delete-btn { 
-  background-color: #f44336; 
-  color: white; 
-  border: none; 
-  padding: 6px 12px; 
-  border-radius: 6px; 
-  cursor: pointer; 
-  transition: 0.3s; 
-}
-
+table { width: 100%; max-width: 700px; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+th, td { padding: 14px 12px; text-align: left; border-bottom: 1px solid #eee; }
+th { background-color: #f4f6f8; font-weight: 600; }
+.delete-btn { background-color: #f44336; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: 0.3s; }
 .delete-btn:hover { background-color: #e53935; }
-
-#totalBooks { 
-  margin-top: 15px; 
-  font-weight: bold; 
-  font-size: 1.2rem; 
-  color: #333; 
-  text-align: center; 
-}
-
+#totalBooks { margin-top: 15px; font-weight: bold; font-size: 1.2rem; color: #333; text-align: center; }
 @media(max-width: 650px){ 
   .input-container, .category-tools, table { width: 95%; }
   th, td { font-size: 0.9rem; padding: 10px; }
@@ -133,6 +65,7 @@ th {
     <button id="exportBtn" class="info">Export CSV</button>
     <input type="file" id="importFile" accept=".csv">
     <button id="importBtn" class="warning">Import CSV</button>
+    <button id="restoreBtn" class="warning">Restore Last Backup</button>
   </div>
 </div>
 
@@ -157,6 +90,7 @@ th {
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getDatabase, ref, push, set, onValue, remove, update } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
+// Firebase config
 const firebaseConfig = {
     apiKey: "AIzaSyDqOE9GsfwOedcwbVIR_fmEMRERcm8ikF4",
     authDomain: "book-inventory-bd5ba.firebaseapp.com",
@@ -171,27 +105,30 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const booksRef = ref(db, 'books');
+const backupsRef = ref(db, 'backups');  // Backup path
 let latestSnapshot = null;
 
-// Add book
+// ADD BOOK
 document.getElementById('addBtn').addEventListener('click', ()=>{
   const name = document.getElementById('bookName').value.trim();
   const amount = document.getElementById('bookAmount').value.trim();
   const category = document.getElementById('bookCategory').value.trim();
   if(!name || !amount || !category){ alert("Fill all fields"); return; }
+
   const newBookRef = push(booksRef);
-  set(newBookRef, {name, amount:Number(amount), category});
+  set(newBookRef, {name, amount:Number(amount), category})
+  .then(()=> createBackup()); // create backup after adding
   document.getElementById('bookName').value='';
   document.getElementById('bookAmount').value='';
   document.getElementById('bookCategory').value='';
 });
 
-// Clear all books
+// CLEAR ALL BOOKS
 document.getElementById('clearAllBtn').addEventListener('click', ()=>{
-  if(confirm("Delete all books?")) remove(booksRef);
+  if(confirm("Delete all books?")) remove(booksRef).then(()=> createBackup());
 });
 
-// Export CSV
+// EXPORT CSV
 document.getElementById('exportBtn').addEventListener('click', ()=>{
   if(!latestSnapshot) return;
   let csv = "Book Name,Amount,Category\n";
@@ -206,40 +143,42 @@ document.getElementById('exportBtn').addEventListener('click', ()=>{
   document.body.appendChild(link); link.click(); document.body.removeChild(link);
 });
 
-// Import CSV (fixed auto-vanish)
+// IMPORT CSV
 document.getElementById('importBtn').addEventListener('click', ()=>{
   const fileInput = document.getElementById('importFile');
   if(!fileInput.files.length){ alert("Choose CSV first."); return; }
   const file = fileInput.files[0];
   const reader = new FileReader();
   reader.onload = function(e){
-    const lines = e.target.result.split("\n").map(l => l.trim()).filter(l => l);
-    for(let i = 1; i < lines.length; i++){
-      const [name, amount, category] = lines[i].split(",").map(v => v.replace(/(^"|"$)/g,"").trim());
-      if(name && amount && category){
+    const lines = e.target.result.split("\n").map(l=>l.trim()).filter(l=>l);
+    for(let i=1;i<lines.length;i++){
+      const [name, amount, category] = lines[i].split(",").map(v=>v.replace(/(^"|"$)/g,"").trim());
+      if(name && amount && category) {
         const newBookRef = push(booksRef);
         set(newBookRef, {name, amount:Number(amount), category});
       }
     }
     fileInput.value='';
+    createBackup();
   }
   reader.readAsText(file);
 });
 
-// Update/Delete functions
+// UPDATE / DELETE
 window.updateBook = function(id, field, value){
   if(field==='amount') value = Number(value);
-  update(ref(db, 'books/' + id), {[field]: value});
+  update(ref(db, 'books/' + id), {[field]: value}).then(()=> createBackup());
 }
-window.deleteBook = function(id){ remove(ref(db, 'books/' + id)); }
+window.deleteBook = function(id){ 
+  remove(ref(db, 'books/' + id)).then(()=> createBackup());
+}
 
-// Listen to DB changes
+// RENDER TABLE
 onValue(booksRef, snapshot=>{
   latestSnapshot = snapshot;
   renderTable();
 });
 
-// Render table
 function renderTable(){
   if(!latestSnapshot) return;
   const tbody = document.querySelector("#bookTable tbody");
@@ -274,10 +213,40 @@ function renderTable(){
   document.getElementById('totalBooks').innerText = `Total Books: ${total}`;
 }
 
-// Search & filter
 document.getElementById('searchBox').addEventListener('input', renderTable);
 document.getElementById('filterCategory').addEventListener('change', renderTable);
 
+// --- BACKUP FUNCTION ---
+function createBackup(){
+  const timestamp = new Date().toISOString();
+  if(!latestSnapshot) return;
+  const booksData = {};
+  latestSnapshot.forEach(child => {
+    booksData[child.key] = child.val();
+  });
+  const newBackupRef = push(backupsRef);
+  set(newBackupRef, {books: booksData, timestamp});
+}
+
+// --- RESTORE BACKUP ---
+document.getElementById('restoreBtn').addEventListener('click', ()=>{
+  if(confirm("Restore last backup? This will overwrite current data.")){
+    onValue(backupsRef, snapshot => {
+      const backups = snapshot.val();
+      if(!backups) return alert("No backups available.");
+      let latestKey = null;
+      let latestTime = 0;
+      for(const key in backups){
+        const t = new Date(backups[key].timestamp).getTime();
+        if(t > latestTime){ latestTime = t; latestKey = key; }
+      }
+      if(!latestKey) return alert("No backups found.");
+      set(booksRef, backups[latestKey].books)
+        .then(()=> alert("Backup restored successfully!"))
+        .catch(err=> alert("Restore failed: "+err));
+    }, { onlyOnce: true });
+  }
+});
 </script>
 </body>
 </html>
