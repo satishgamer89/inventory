@@ -163,7 +163,7 @@ th { background-color: #f4f6f8; font-weight: 600; }
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getDatabase, ref, push, set, onValue, remove, update, get, child } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDqOE9GsfwOedcwbVIR_fmEMRERcm8ikF4",
@@ -190,6 +190,9 @@ const authContainer = document.getElementById("authContainer");
 const appContainer = document.getElementById("appContainer");
 const logoutBtn = document.getElementById("logoutBtn");
 
+// Ensure login is only session-based
+setPersistence(auth, browserSessionPersistence);
+
 document.getElementById("loginBtn").addEventListener("click", ()=>{
   const email = document.getElementById("loginEmail").value;
   const password = document.getElementById("loginPassword").value;
@@ -204,23 +207,22 @@ onAuthStateChanged(auth, user=>{
     appContainer.style.display="block";
     logoutBtn.style.display="block";
 
-    // Auto logout after 2 hours (7200000 ms)
+    // Auto logout after 1 hour (3600000 ms)
     if(logoutTimer) clearTimeout(logoutTimer);
     logoutTimer = setTimeout(()=>{
       alert("⏰ Session expired. Please log in again.");
       signOut(auth);
-    }, 7200000);
+    }, 3600000);
 
   } else {
     authContainer.style.display="block";
     appContainer.style.display="none";
     logoutBtn.style.display="none";
-
     if(logoutTimer) clearTimeout(logoutTimer);
   }
 });
 
-// --- Inventory System (unchanged) ---
+// --- Inventory System ---
 document.getElementById("importFile").addEventListener("change", e=>{
   const fileName = e.target.files.length ? e.target.files[0].name : "No file chosen";
   document.getElementById("fileName").textContent = fileName;
