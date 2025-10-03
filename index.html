@@ -27,10 +27,6 @@ button:hover { background-color: #45a049; }
 button.secondary { background-color: #f44336; } button.secondary:hover { background-color: #e53935; }
 button.info { background-color: #2196F3; } button.info:hover { background-color: #1976D2; }
 button.warning { background-color: #FF9800; } button.warning:hover { background-color: #F57C00; }
-.table-container { width: 100%; max-width: 700px; overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05); min-width: 500px; }
-th, td { padding: 14px 12px; text-align: left; border-bottom: 1px solid #eee; white-space: nowrap; }
-th { background-color: #f4f6f8; font-weight: 600; }
 .delete-btn { background-color: #f44336; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: 0.3s; }
 .delete-btn:hover { background-color: #e53935; }
 #totalBooks { margin-top: 15px; font-weight: bold; font-size: 1.2rem; color: #333; text-align: center; }
@@ -63,6 +59,24 @@ th { background-color: #f4f6f8; font-weight: 600; }
   white-space: nowrap;
 }
 #importFile { display: none; }
+
+/* Table responsiveness */
+.table-container {
+  width: 100%;
+  max-width: 700px;
+  overflow-x: auto;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+  background: #fff;
+}
+table { width: 100%; border-collapse: collapse; }
+th, td { 
+  padding: 14px 12px; 
+  text-align: left; 
+  border-bottom: 1px solid #eee; 
+  white-space: nowrap; 
+}
+th { background-color: #f4f6f8; font-weight: 600; }
 
 /* Responsive layout improvements */
 @media(max-width: 650px){
@@ -101,7 +115,7 @@ th { background-color: #f4f6f8; font-weight: 600; }
     <button id="clearAllBtn" class="secondary">Clear All Books</button>
     <button id="exportBtn" class="info">Export CSV</button>
     
-    <!-- FIXED RESPONSIVE FILE INPUT -->
+    <!-- Responsive file input -->
     <div class="file-input-wrapper">
       <label for="importFile">Choose CSV</label>
       <span id="fileName">No file chosen</span>
@@ -112,7 +126,7 @@ th { background-color: #f4f6f8; font-weight: 600; }
     <button id="backupBtn" class="info">Backup Now</button>
   </div>
 
-  <!-- Restore + Delete Backup now grouped -->
+  <!-- Restore + Delete Backup -->
   <div class="restore-controls" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
     <select id="restoreSelect"></select>
     <button id="restoreBtn" class="warning">Restore Backup</button>
@@ -127,7 +141,6 @@ th { background-color: #f4f6f8; font-weight: 600; }
   <input type="text" id="searchBox" placeholder="Search...">
 </div>
 
-<!-- TABLE IS NOW WRAPPED FOR SCROLL -->
 <div class="table-container">
   <table id="bookTable">
     <thead>
@@ -140,12 +153,163 @@ th { background-color: #f4f6f8; font-weight: 600; }
 <div id="totalBooks">Total Books: 0</div>
 
 <script type="module">
-// (⚡ all your Firebase logic, add, clear, import, export, backup, restore, delete backup, render stays unchanged)
-// Only addition was: fileName display handler
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, push, set, onValue, remove, update, get, child } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDqOE9GsfwOedcwbVIR_fmEMRERcm8ikF4",
+  authDomain: "book-inventory-bd5ba.firebaseapp.com",
+  databaseURL: "https://book-inventory-bd5ba-default-rtdb.firebaseio.com",
+  projectId: "book-inventory-bd5ba",
+  storageBucket: "book-inventory-bd5ba.firebasestorage.app",
+  messagingSenderId: "778702930923",
+  appId: "1:778702930923:web:34a672ffda2eaa764f4fae",
+  measurementId: "G-MW8W0RSYY2"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const booksRef = ref(db, 'books');
+const backupsRef = ref(db, 'backups');
+let latestSnapshot = null;
+
+// File name display
 document.getElementById("importFile").addEventListener("change", e=>{
   const fileName = e.target.files.length ? e.target.files[0].name : "No file chosen";
   document.getElementById("fileName").textContent = fileName;
 });
+
+// ---- Database functions remain unchanged ----
+
+// Add book
+document.getElementById('addBtn').addEventListener('click', ()=>{
+  const name = document.getElementById('bookName').value.trim();
+  const amount = document.getElementById('bookAmount').value.trim();
+  const category = document.getElementById('bookCategory').value.trim();
+  if(!name || !amount || !category){ alert("Fill all fields"); return; }
+  const newBookRef = push(booksRef);
+  set(newBookRef, {name, amount:Number(amount), category});
+  document.getElementById('bookName').value='';
+  document.getElementById('bookAmount').value='';
+  document.getElementById('bookCategory').value='';
+});
+
+// Clear all
+document.getElementById('clearAllBtn').addEventListener('click', ()=>{ if(confirm("Delete all books?")) remove(booksRef); });
+
+// Export CSV
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  if(!latestSnapshot) return;
+  let csv = "Book Name,Amount,Category\n";
+  latestSnapshot.forEach(child=>{ const b = child.val(); csv += `"${b.name}",${b.amount},"${b.category}"\n`; });
+  const blob = new Blob([csv], {type:"text/csv"});
+  const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'book_list.csv';
+  document.body.appendChild(link); link.click(); document.body.removeChild(link);
+});
+
+// Import CSV
+document.getElementById('importBtn').addEventListener('click', ()=>{
+  const fileInput = document.getElementById('importFile');
+  if(!fileInput.files.length){ alert("Choose CSV first."); return; }
+  const file = fileInput.files[0]; const reader = new FileReader();
+  reader.onload = function(e){
+    const lines = e.target.result.split("\n").map(l=>l.trim()).filter(l=>l);
+    for(let i=1;i<lines.length;i++){
+      const [name, amount, category] = lines[i].split(",").map(v=>v.replace(/(^"|"$)/g,"").trim());
+      if(name && amount && category){ const newBookRef = push(booksRef); set(newBookRef,{name, amount:Number(amount), category}); }
+    }
+    fileInput.value='';
+    document.getElementById("fileName").textContent = "No file chosen";
+  }; reader.readAsText(file);
+});
+
+// Backup
+document.getElementById('backupBtn').addEventListener('click', async ()=>{
+  if(!latestSnapshot) { alert("No data to backup"); return; }
+  const timestamp = new Date().toISOString();
+  let backupData = {};
+  latestSnapshot.forEach(child=>{ backupData[child.key]=child.val(); });
+  await push(backupsRef, {timestamp, books: backupData});
+  alert("Backup completed!");
+  loadBackups();
+});
+
+// Restore
+document.getElementById('restoreBtn').addEventListener('click', async ()=>{
+  const backupKey = document.getElementById('restoreSelect').value;
+  if(!backupKey){ alert("Select backup first"); return; }
+  const backupSnap = await get(child(backupsRef, backupKey));
+  if(!backupSnap.exists()){ alert("Backup not found"); return; }
+  const booksData = backupSnap.val().books;
+  remove(booksRef);
+  Object.values(booksData).forEach(b=>{
+    const newBookRef = push(booksRef);
+    set(newBookRef, b);
+  });
+  alert("Restore completed!");
+});
+
+// Delete backup
+document.getElementById('deleteBackupBtn').addEventListener('click', async () => {
+  const backupKey = document.getElementById('restoreSelect').value;
+  if(!backupKey){ alert("Select backup first"); return; }
+  if(!confirm("Are you sure you want to delete this backup?")) return;
+  try{
+    await remove(child(backupsRef, backupKey));
+    alert("Backup deleted!");
+    loadBackups();
+  }catch(err){
+    console.error(err);
+    alert("Failed to delete backup.");
+  }
+});
+
+// Load backups
+async function loadBackups(){
+  const snap = await get(backupsRef);
+  const restoreSelect = document.getElementById('restoreSelect');
+  restoreSelect.innerHTML = '<option value="">Select Backup</option>';
+  if(snap.exists()){
+    Object.entries(snap.val()).forEach(([key,val])=>{
+      const option = document.createElement('option');
+      option.value=key; option.text=`${val.timestamp}`;
+      restoreSelect.appendChild(option);
+    });
+  }
+}
+
+// Update & Delete book
+window.updateBook = function(id, field, value){ if(field==='amount') value = Number(value); update(ref(db, 'books/'+id), {[field]:value}); }
+window.deleteBook = function(id){ remove(ref(db, 'books/'+id)); }
+
+// Render table
+onValue(booksRef, snapshot=>{ latestSnapshot=snapshot; renderTable(); loadBackups(); });
+
+function renderTable(){
+  if(!latestSnapshot) return;
+  const tbody = document.querySelector("#bookTable tbody"); tbody.innerHTML='';
+  const filter = document.getElementById('filterCategory').value;
+  const search = document.getElementById('searchBox').value.toLowerCase();
+  let total=0; const categories=new Set();
+  latestSnapshot.forEach(child=>{
+    const b=child.val(), id=child.key; categories.add(b.category);
+    if((filter==='All'||b.category===filter)&&b.name.toLowerCase().includes(search)){
+      total+=Number(b.amount);
+      const row=document.createElement('tr');
+      row.innerHTML=`<td contenteditable="true" onblur="updateBook('${id}','name',this.innerText)">${b.name}</td>
+                     <td contenteditable="true" onblur="updateBook('${id}','amount',this.innerText)">${b.amount}</td>
+                     <td contenteditable="true" onblur="updateBook('${id}','category',this.innerText)">${b.category}</td>
+                     <td><button class="delete-btn" onclick="deleteBook('${id}')">Delete</button></td>`;
+      tbody.appendChild(row);
+    }
+  });
+  const filterSelect=document.getElementById('filterCategory'); filterSelect.innerHTML='<option value="All">All</option>';
+  categories.forEach(c=>filterSelect.innerHTML+=`<option value="${c}">${c}</option>`);
+  document.getElementById('totalBooks').innerText=`Total Books: ${total}`;
+}
+
+document.getElementById('searchBox').addEventListener('input', renderTable);
+document.getElementById('filterCategory').addEventListener('change', renderTable);
 </script>
 </body>
 </html>
