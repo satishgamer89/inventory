@@ -59,6 +59,8 @@ th { background-color: #f4f6f8; font-weight: 600; }
     <button id="backupBtn" class="info">Backup Now</button>
     <select id="restoreSelect"></select>
     <button id="restoreBtn" class="warning">Restore Backup</button>
+    <!-- ADDED Delete Backup Button -->
+    <button id="deleteBackupBtn" class="secondary">Delete Backup</button>
   </div>
 </div>
 
@@ -164,6 +166,21 @@ document.getElementById('restoreBtn').addEventListener('click', async ()=>{
     set(newBookRef, b);
   });
   alert("Restore completed!");
+});
+
+// DELETE BACKUP (ADDED)
+document.getElementById('deleteBackupBtn').addEventListener('click', async () => {
+  const backupKey = document.getElementById('restoreSelect').value;
+  if(!backupKey){ alert("Select backup first"); return; }
+  if(!confirm("Are you sure you want to delete this backup? This action cannot be undone.")) return;
+  try{
+    await remove(child(backupsRef, backupKey));
+    alert("Backup deleted!");
+    loadBackups();
+  }catch(err){
+    console.error("Delete backup failed:", err);
+    alert("Failed to delete backup. See console for details.");
+  }
 });
 
 // Load backups into select
