@@ -105,7 +105,6 @@ th { background-color: #f4f6f8; font-weight: 600; }
   <input type="password" id="loginPassword" placeholder="Password">
   <div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">
     <button id="loginBtn">Login</button>
-    <button id="registerBtn" class="info">Register</button>
   </div>
   <button id="logoutBtn" class="secondary" style="margin-top:10px; display:none;">Logout</button>
 </div>
@@ -164,7 +163,7 @@ th { background-color: #f4f6f8; font-weight: 600; }
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getDatabase, ref, push, set, onValue, remove, update, get, child } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDqOE9GsfwOedcwbVIR_fmEMRERcm8ikF4",
@@ -184,6 +183,7 @@ const auth = getAuth(app);
 const booksRef = ref(db, 'books');
 const backupsRef = ref(db, 'backups');
 let latestSnapshot = null;
+let logoutTimer = null;
 
 // --- AUTH LOGIC ---
 const authContainer = document.getElementById("authContainer");
@@ -196,12 +196,6 @@ document.getElementById("loginBtn").addEventListener("click", ()=>{
   signInWithEmailAndPassword(auth, email, password).catch(err=>alert(err.message));
 });
 
-document.getElementById("registerBtn").addEventListener("click", ()=>{
-  const email = document.getElementById("loginEmail").value;
-  const password = document.getElementById("loginPassword").value;
-  createUserWithEmailAndPassword(auth, email, password).catch(err=>alert(err.message));
-});
-
 logoutBtn.addEventListener("click", ()=> signOut(auth));
 
 onAuthStateChanged(auth, user=>{
@@ -209,14 +203,24 @@ onAuthStateChanged(auth, user=>{
     authContainer.style.display="none";
     appContainer.style.display="block";
     logoutBtn.style.display="block";
+
+    // Auto logout after 2 hours (7200000 ms)
+    if(logoutTimer) clearTimeout(logoutTimer);
+    logoutTimer = setTimeout(()=>{
+      alert("⏰ Session expired. Please log in again.");
+      signOut(auth);
+    }, 7200000);
+
   } else {
     authContainer.style.display="block";
     appContainer.style.display="none";
     logoutBtn.style.display="none";
+
+    if(logoutTimer) clearTimeout(logoutTimer);
   }
 });
 
-// --- Inventory System (Unchanged) ---
+// --- Inventory System (unchanged) ---
 document.getElementById("importFile").addEventListener("change", e=>{
   const fileName = e.target.files.length ? e.target.files[0].name : "No file chosen";
   document.getElementById("fileName").textContent = fileName;
