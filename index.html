@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📚 Book Inventory with Backup</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { 
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+  background: #f5f7fa; 
+  display: flex; 
+  flex-direction: column; 
+  align-items: center; 
+  padding: 20px; 
+  min-height: 100vh; 
+}
+h1 { color: #333; margin-bottom: 20px; font-size: 2rem; }
+.input-container, .category-tools { 
+  width: 100%; max-width: 600px; background: #fff; padding: 20px; border-radius: 12px; 
+  box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 20px; display: flex; flex-direction: column; gap: 10px; 
+}
+input, select, button { padding: 12px; font-size: 1rem; border-radius: 8px; border: 1px solid #ccc; }
+input:focus, select:focus { outline: none; border-color: #4CAF50; }
+button { cursor: pointer; background-color: #4CAF50; color: #fff; border: none; transition: 0.3s; border-radius: 8px; }
+button:hover { background-color: #45a049; }
+button.secondary { background-color: #f44336; } button.secondary:hover { background-color: #e53935; }
+button.info { background-color: #2196F3; } button.info:hover { background-color: #1976D2; }
+button.warning { background-color: #FF9800; } button.warning:hover { background-color: #F57C00; }
+table { width: 100%; max-width: 700px; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+th, td { padding: 14px 12px; text-align: left; border-bottom: 1px solid #eee; }
+th { background-color: #f4f6f8; font-weight: 600; }
+.delete-btn { background-color: #f44336; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; transition: 0.3s; }
+.delete-btn:hover { background-color: #e53935; }
+#totalBooks { margin-top: 15px; font-weight: bold; font-size: 1.2rem; color: #333; text-align: center; }
+@media(max-width: 650px){ .input-container, .category-tools, table { width: 95%; } th, td { font-size: 0.9rem; padding: 10px; } input, select, button { font-size: 0.9rem; padding: 10px; } }
+</style>
+</head>
+<body>
+<h1>📚 Book Inventory with Backup</h1>
+
+<div class="input-container">
+  <input type="text" id="bookName" placeholder="Enter book name">
+  <input type="number" id="bookAmount" placeholder="Enter amount">
+  <select id="bookCategory">
+    <option value="">Select Category</option>
+    <option>1st SEM</option>
+    <option>3rd SEM</option>
+    <option>5th SEM</option>
+    <option>7th SEM</option>
+    <option>Other</option>
+  </select>
+  <div style="display:flex; gap:10px; flex-wrap:wrap;">
+    <button id="addBtn">Add Book</button>
+    <button id="clearAllBtn" class="secondary">Clear All Books</button>
+    <button id="exportBtn" class="info">Export CSV</button>
+    <input type="file" id="importFile" accept=".csv">
+    <button id="importBtn" class="warning">Import CSV</button>
+    <button id="backupBtn" class="info">Backup Now</button>
+    <select id="restoreSelect"></select>
+    <button id="restoreBtn" class="warning">Restore Backup</button>
+  </div>
+</div>
+
+<div class="category-tools">
+  <label><b>Filter:</b></label>
+  <select id="filterCategory"><option value="All">All</option></select>
+  <label><b>Search:</b></label>
+  <input type="text" id="searchBox" placeholder="Search...">
+</div>
+
+<table id="bookTable">
+  <thead>
+    <tr><th>Name</th><th>Amount</th><th>Category</th><th>Actions</th></tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<div id="totalBooks">Total Books: 0</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getDatabase, ref, push, set, onValue, remove, update, get, child } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+const firebaseConfig = {
+    apiKey: "AIzaSyDqOE9GsfwOedcwbVIR_fmEMRERcm8ikF4",
+    authDomain: "book-inventory-bd5ba.firebaseapp.com",
+    databaseURL: "https://book-inventory-bd5ba-default-rtdb.firebaseio.com",
+    projectId: "book-inventory-bd5ba",
+    storageBucket: "book-inventory-bd5ba.firebasestorage.app",
+    messagingSenderId: "778702930923",
+    appId: "1:778702930923:web:34a672ffda2eaa764f4fae",
+    measurementId: "G-MW8W0RSYY2"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const booksRef = ref(db, 'books');
+const backupsRef = ref(db, 'backups');
+let latestSnapshot = null;
+
+// Add book
+document.getElementById('addBtn').addEventListener('click', ()=>{
+  const name = document.getElementById('bookName').value.trim();
+  const amount = document.getElementById('bookAmount').value.trim();
+  const category = document.getElementById('bookCategory').value.trim();
+  if(!name || !amount || !category){ alert("Fill all fields"); return; }
+  const newBookRef = push(booksRef);
+  set(newBookRef, {name, amount:Number(amount), category});
+  document.getElementById('bookName').value='';
+  document.getElementById('bookAmount').value='';
+  document.getElementById('bookCategory').value='';
+});
+
+// Clear all books
+document.getElementById('clearAllBtn').addEventListener('click', ()=>{ if(confirm("Delete all books?")) remove(booksRef); });
+
+// Export CSV
+document.getElementById('exportBtn').addEventListener('click', ()=>{
+  if(!latestSnapshot) return;
+  let csv = "Book Name,Amount,Category\n";
+  latestSnapshot.forEach(child=>{ const b = child.val(); csv += `"${b.name}",${b.amount},"${b.category}"\n`; });
+  const blob = new Blob([csv], {type:"text/csv"});
+  const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'book_list.csv';
+  document.body.appendChild(link); link.click(); document.body.removeChild(link);
+});
+
+// Import CSV
+document.getElementById('importBtn').addEventListener('click', ()=>{
+  const fileInput = document.getElementById('importFile');
+  if(!fileInput.files.length){ alert("Choose CSV first."); return; }
+  const file = fileInput.files[0]; const reader = new FileReader();
+  reader.onload = function(e){
+    const lines = e.target.result.split("\n").map(l=>l.trim()).filter(l=>l);
+    for(let i=1;i<lines.length;i++){
+      const [name, amount, category] = lines[i].split(",").map(v=>v.replace(/(^"|"$)/g,"").trim());
+      if(name && amount && category){ const newBookRef = push(booksRef); set(newBookRef,{name, amount:Number(amount), category}); }
+    }
+    fileInput.value='';
+  }; reader.readAsText(file);
+});
+
+// Backup
+document.getElementById('backupBtn').addEventListener('click', async ()=>{
+  if(!latestSnapshot) { alert("No data to backup"); return; }
+  const timestamp = new Date().toISOString();
+  let backupData = {};
+  latestSnapshot.forEach(child=>{ backupData[child.key]=child.val(); });
+  await push(backupsRef, {timestamp, books: backupData});
+  alert("Backup completed!");
+  loadBackups();
+});
+
+// Restore
+document.getElementById('restoreBtn').addEventListener('click', async ()=>{
+  const backupKey = document.getElementById('restoreSelect').value;
+  if(!backupKey){ alert("Select backup first"); return; }
+  const backupSnap = await get(child(backupsRef, backupKey));
+  if(!backupSnap.exists()){ alert("Backup not found"); return; }
+  const booksData = backupSnap.val().books;
+  remove(booksRef);
+  Object.values(booksData).forEach(b=>{
+    const newBookRef = push(booksRef);
+    set(newBookRef, b);
+  });
+  alert("Restore completed!");
+});
+
+// Load backups into select
+async function loadBackups(){
+  const snap = await get(backupsRef);
+  const restoreSelect = document.getElementById('restoreSelect');
+  restoreSelect.innerHTML = '<option value="">Select Backup</option>';
+  if(snap.exists()){
+    Object.entries(snap.val()).forEach(([key,val])=>{
+      const option = document.createElement('option');
+      option.value=key; option.text=`${val.timestamp}`;
+      restoreSelect.appendChild(option);
+    });
+  }
+}
+
+// Update & Delete book
+window.updateBook = function(id, field, value){ if(field==='amount') value = Number(value); update(ref(db, 'books/'+id), {[field]:value}); }
+window.deleteBook = function(id){ remove(ref(db, 'books/'+id)); }
+
+// Fetch books and render
+onValue(booksRef, snapshot=>{ latestSnapshot=snapshot; renderTable(); loadBackups(); });
+
+function renderTable(){
+  if(!latestSnapshot) return;
+  const tbody = document.querySelector("#bookTable tbody"); tbody.innerHTML='';
+  const filter = document.getElementById('filterCategory').value;
+  const search = document.getElementById('searchBox').value.toLowerCase();
+  let total=0; const categories=new Set();
+  latestSnapshot.forEach(child=>{
+    const b=child.val(), id=child.key; categories.add(b.category);
+    if((filter==='All'||b.category===filter)&&b.name.toLowerCase().includes(search)){
+      total+=Number(b.amount);
+      const row=document.createElement('tr');
+      row.innerHTML=`<td contenteditable="true" onblur="updateBook('${id}','name',this.innerText)">${b.name}</td>
+                     <td contenteditable="true" onblur="updateBook('${id}','amount',this.innerText)">${b.amount}</td>
+                     <td contenteditable="true" onblur="updateBook('${id}','category',this.innerText)">${b.category}</td>
+                     <td><button class="delete-btn" onclick="deleteBook('${id}')">Delete</button></td>`;
+      tbody.appendChild(row);
+    }
+  });
+  const filterSelect=document.getElementById('filterCategory'); filterSelect.innerHTML='<option value="All">All</option>';
+  categories.forEach(c=>filterSelect.innerHTML+=`<option value="${c}">${c}</option>`);
+  document.getElementById('totalBooks').innerText=`Total Books: ${total}`;
+}
+
+document.getElementById('searchBox').addEventListener('input', renderTable);
+document.getElementById('filterCategory').addEventListener('change', renderTable);
+</script>
+</body>
+</html>
