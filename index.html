@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>📚 Book Inventory with Backup</title>
+<title>📚 Book Inventory with Login & Backup</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body { 
@@ -84,7 +84,6 @@ th { background-color: #f4f6f8; font-weight: 600; }
   th, td { font-size: 0.9rem; padding: 10px; }
   input, select, button { font-size: 0.9rem; padding: 10px; }
   #fileName { max-width: 100%; }
-  /* Make restore section stack */
   .restore-controls {
     flex-direction: column;
     align-items: stretch;
@@ -99,62 +98,73 @@ th { background-color: #f4f6f8; font-weight: 600; }
 <body>
 <h1>📚 Book Inventory with Backup</h1>
 
-<div class="input-container">
-  <input type="text" id="bookName" placeholder="Enter book name">
-  <input type="number" id="bookAmount" placeholder="Enter amount">
-  <select id="bookCategory">
-    <option value="">Select Category</option>
-    <option>1st SEM</option>
-    <option>3rd SEM</option>
-    <option>5th SEM</option>
-    <option>7th SEM</option>
-    <option>Other</option>
-  </select>
-  <div style="display:flex; gap:10px; flex-wrap:wrap;">
-    <button id="addBtn">Add Book</button>
-    <button id="clearAllBtn" class="secondary">Clear All Books</button>
-    <button id="exportBtn" class="info">Export CSV</button>
-    
-    <!-- Responsive file input -->
-    <div class="file-input-wrapper">
-      <label for="importFile">Choose CSV</label>
-      <span id="fileName">No file chosen</span>
-      <input type="file" id="importFile" accept=".csv">
+<!-- Login Form -->
+<div id="authContainer" style="max-width:400px; background:#fff; padding:20px; border-radius:12px; box-shadow:0 4px 10px rgba(0,0,0,0.1); margin-bottom:20px;">
+  <h2>Login</h2>
+  <input type="email" id="loginEmail" placeholder="Email">
+  <input type="password" id="loginPassword" placeholder="Password">
+  <div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">
+    <button id="loginBtn">Login</button>
+    <button id="registerBtn" class="info">Register</button>
+  </div>
+  <button id="logoutBtn" class="secondary" style="margin-top:10px; display:none;">Logout</button>
+</div>
+
+<!-- Inventory App -->
+<div id="appContainer" style="display:none;">
+  <div class="input-container">
+    <input type="text" id="bookName" placeholder="Enter book name">
+    <input type="number" id="bookAmount" placeholder="Enter amount">
+    <select id="bookCategory">
+      <option value="">Select Category</option>
+      <option>1st SEM</option>
+      <option>3rd SEM</option>
+      <option>5th SEM</option>
+      <option>7th SEM</option>
+      <option>Other</option>
+    </select>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <button id="addBtn">Add Book</button>
+      <button id="clearAllBtn" class="secondary">Clear All Books</button>
+      <button id="exportBtn" class="info">Export CSV</button>
+      <div class="file-input-wrapper">
+        <label for="importFile">Choose CSV</label>
+        <span id="fileName">No file chosen</span>
+        <input type="file" id="importFile" accept=".csv">
+      </div>
+      <button id="importBtn" class="warning">Import CSV</button>
+      <button id="backupBtn" class="info">Backup Now</button>
     </div>
-    
-    <button id="importBtn" class="warning">Import CSV</button>
-    <button id="backupBtn" class="info">Backup Now</button>
+    <div class="restore-controls" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+      <select id="restoreSelect"></select>
+      <button id="restoreBtn" class="warning">Restore Backup</button>
+      <button id="deleteBackupBtn" class="secondary">Delete Backup</button>
+    </div>
   </div>
 
-  <!-- Restore + Delete Backup -->
-  <div class="restore-controls" style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
-    <select id="restoreSelect"></select>
-    <button id="restoreBtn" class="warning">Restore Backup</button>
-    <button id="deleteBackupBtn" class="secondary">Delete Backup</button>
+  <div class="category-tools">
+    <label><b>Filter:</b></label>
+    <select id="filterCategory"><option value="All">All</option></select>
+    <label><b>Search:</b></label>
+    <input type="text" id="searchBox" placeholder="Search...">
   </div>
-</div>
 
-<div class="category-tools">
-  <label><b>Filter:</b></label>
-  <select id="filterCategory"><option value="All">All</option></select>
-  <label><b>Search:</b></label>
-  <input type="text" id="searchBox" placeholder="Search...">
-</div>
+  <div class="table-container">
+    <table id="bookTable">
+      <thead>
+        <tr><th>Name</th><th>Amount</th><th>Category</th><th>Actions</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
 
-<div class="table-container">
-  <table id="bookTable">
-    <thead>
-      <tr><th>Name</th><th>Amount</th><th>Category</th><th>Actions</th></tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <div id="totalBooks">Total Books: 0</div>
 </div>
-
-<div id="totalBooks">Total Books: 0</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
 import { getDatabase, ref, push, set, onValue, remove, update, get, child } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDqOE9GsfwOedcwbVIR_fmEMRERcm8ikF4",
@@ -169,19 +179,49 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+const auth = getAuth(app);
+
 const booksRef = ref(db, 'books');
 const backupsRef = ref(db, 'backups');
 let latestSnapshot = null;
 
-// File name display
+// --- AUTH LOGIC ---
+const authContainer = document.getElementById("authContainer");
+const appContainer = document.getElementById("appContainer");
+const logoutBtn = document.getElementById("logoutBtn");
+
+document.getElementById("loginBtn").addEventListener("click", ()=>{
+  const email = document.getElementById("loginEmail").value;
+  const password = document.getElementById("loginPassword").value;
+  signInWithEmailAndPassword(auth, email, password).catch(err=>alert(err.message));
+});
+
+document.getElementById("registerBtn").addEventListener("click", ()=>{
+  const email = document.getElementById("loginEmail").value;
+  const password = document.getElementById("loginPassword").value;
+  createUserWithEmailAndPassword(auth, email, password).catch(err=>alert(err.message));
+});
+
+logoutBtn.addEventListener("click", ()=> signOut(auth));
+
+onAuthStateChanged(auth, user=>{
+  if(user){
+    authContainer.style.display="none";
+    appContainer.style.display="block";
+    logoutBtn.style.display="block";
+  } else {
+    authContainer.style.display="block";
+    appContainer.style.display="none";
+    logoutBtn.style.display="none";
+  }
+});
+
+// --- Inventory System (Unchanged) ---
 document.getElementById("importFile").addEventListener("change", e=>{
   const fileName = e.target.files.length ? e.target.files[0].name : "No file chosen";
   document.getElementById("fileName").textContent = fileName;
 });
 
-// ---- Database functions remain unchanged ----
-
-// Add book
 document.getElementById('addBtn').addEventListener('click', ()=>{
   const name = document.getElementById('bookName').value.trim();
   const amount = document.getElementById('bookAmount').value.trim();
@@ -194,10 +234,8 @@ document.getElementById('addBtn').addEventListener('click', ()=>{
   document.getElementById('bookCategory').value='';
 });
 
-// Clear all
 document.getElementById('clearAllBtn').addEventListener('click', ()=>{ if(confirm("Delete all books?")) remove(booksRef); });
 
-// Export CSV
 document.getElementById('exportBtn').addEventListener('click', ()=>{
   if(!latestSnapshot) return;
   let csv = "Book Name,Amount,Category\n";
@@ -207,7 +245,6 @@ document.getElementById('exportBtn').addEventListener('click', ()=>{
   document.body.appendChild(link); link.click(); document.body.removeChild(link);
 });
 
-// Import CSV
 document.getElementById('importBtn').addEventListener('click', ()=>{
   const fileInput = document.getElementById('importFile');
   if(!fileInput.files.length){ alert("Choose CSV first."); return; }
@@ -223,7 +260,6 @@ document.getElementById('importBtn').addEventListener('click', ()=>{
   }; reader.readAsText(file);
 });
 
-// Backup
 document.getElementById('backupBtn').addEventListener('click', async ()=>{
   if(!latestSnapshot) { alert("No data to backup"); return; }
   const timestamp = new Date().toISOString();
@@ -234,7 +270,6 @@ document.getElementById('backupBtn').addEventListener('click', async ()=>{
   loadBackups();
 });
 
-// Restore
 document.getElementById('restoreBtn').addEventListener('click', async ()=>{
   const backupKey = document.getElementById('restoreSelect').value;
   if(!backupKey){ alert("Select backup first"); return; }
@@ -249,7 +284,6 @@ document.getElementById('restoreBtn').addEventListener('click', async ()=>{
   alert("Restore completed!");
 });
 
-// Delete backup
 document.getElementById('deleteBackupBtn').addEventListener('click', async () => {
   const backupKey = document.getElementById('restoreSelect').value;
   if(!backupKey){ alert("Select backup first"); return; }
@@ -264,7 +298,6 @@ document.getElementById('deleteBackupBtn').addEventListener('click', async () =>
   }
 });
 
-// Load backups
 async function loadBackups(){
   const snap = await get(backupsRef);
   const restoreSelect = document.getElementById('restoreSelect');
@@ -278,11 +311,9 @@ async function loadBackups(){
   }
 }
 
-// Update & Delete book
 window.updateBook = function(id, field, value){ if(field==='amount') value = Number(value); update(ref(db, 'books/'+id), {[field]:value}); }
 window.deleteBook = function(id){ remove(ref(db, 'books/'+id)); }
 
-// Render table
 onValue(booksRef, snapshot=>{ latestSnapshot=snapshot; renderTable(); loadBackups(); });
 
 function renderTable(){
